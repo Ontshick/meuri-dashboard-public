@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protocole EAP - PEP · MEURI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#8a8984; --line:#e4e3de;
+  --accent:#2a78d6; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#6250d6;
+  --ok:#1baf7a; --warn-bg:#fff6e0; --warn:#c98500; --err-bg:#fdecec; --err:#c03a39; --ok-bg:#e6f6ef;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.5 system-ui,"Segoe UI",sans-serif}
+/* ---- mise en page : menu latéral gauche + contenu ---- */
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+aside.menu{background:#14213d;color:#dfe5ef;position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px 30px}
+aside.menu .logo{padding:4px 10px 14px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:10px}
+aside.menu .logo b{display:block;font-size:16px;color:#fff} aside.menu .logo span{font-size:12px;color:#9fb0c9}
+aside.menu .groupe{margin:14px 0 4px;padding:0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8ea3c2;font-weight:700}
+aside.menu .groupe small{display:block;text-transform:none;letter-spacing:0;font-weight:400;color:#7d90ad}
+aside.menu a{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 0;border-radius:6px;color:#dfe5ef;text-decoration:none;font-size:14px}
+aside.menu a:hover{background:rgba(255,255,255,.07)}
+aside.menu a.actif{background:#2a78d6;color:#fff;font-weight:600}
+aside.menu a.sous{padding-left:28px;font-size:13.5px;color:#c4cfdf}
+aside.menu a.sous.actif{color:#fff}
+aside.menu .pastille{margin-left:auto;font-size:11px;background:rgba(255,255,255,.12);border-radius:8px;padding:0 6px}
+.contenu{min-width:0}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.wrap{max-width:1240px;margin:0 auto;padding:0 22px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;flex-wrap:wrap}
+.brand h1{font-size:19px;margin:0} .brand small{color:var(--ink2)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+#bouton-menu{display:none}
+main{padding:22px 0 60px}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  aside.menu{position:fixed;left:0;top:0;width:260px;z-index:30;transform:translateX(-100%);transition:transform .2s}
+  aside.menu.ouvert{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  #bouton-menu{display:inline-block}
+  .wrap{padding:0 16px}
+}
+h2{font-size:20px;margin:30px 0 12px} h2:first-child{margin-top:0} h3{font-size:16px;margin:0 0 10px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.grid-3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.2} .kpi span{color:var(--ink2);font-size:13px}
+.kpi.alerte b{color:var(--err)} .kpi.bon b{color:var(--ok)}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td.txt,table.t th.txt{text-align:left;white-space:normal}
+table.t thead th{border-bottom:2px solid var(--ink2);color:var(--ink2);font-weight:600}
+table.t tr.tot td{font-weight:600;border-top:2px solid var(--line)}
+.scroll{overflow-x:auto}
+.chart{position:relative;height:260px} .chart.h320{height:320px} .chart.h200{height:200px}
+.note{background:var(--warn-bg);border-left:3px solid var(--s4);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.info{background:#eaf2fc;border-left:3px solid var(--accent);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.msg{padding:10px 14px;border-radius:6px;margin-bottom:14px} .msg.success{background:var(--ok-bg)} .msg.error{background:var(--err-bg)}
+.muted{color:var(--ink2)} .petit{font-size:12.5px}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:var(--line)}
+.badge.dc{background:var(--err-bg);color:var(--err)} .badge.ok{background:var(--ok-bg);color:#0d7a52}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer;text-decoration:none}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+form.filtres{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+form.filtres label{display:block;font-size:12px;color:var(--ink2)}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.vide{text-align:center;padding:60px 20px}
+.methodo ol.etapes{padding-left:18px;margin:6px 0} .methodo ol.etapes li{margin-bottom:8px}
+.methodo details{margin-top:8px} .methodo summary{cursor:pointer;color:var(--accent)}
+section.interpretation{margin-top:30px;padding:18px;border-radius:12px;background:#eef5fd;border:2px solid #b9d4f3}
+section.interpretation h2{margin-top:0;color:#1d5fae}
+section.interpretation .card ul{padding-left:18px;margin:0} section.interpretation .card li{margin-bottom:6px}
+section.interpretation .card.conclusion{border:2px solid #1d5fae;grid-column:1 / -1}
+.sommaire{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px} .sommaire a{font-size:13px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+</style>
+
+</head>
+<body>
+<div class="app">
+<aside class="menu" id="menu">
+  <div class="logo"><b>MEURI RDC - Ebola</b><span>Protocole EAP Remdesivir / MBP134 · REDCap</span></div>
+
+  <div class="groupe">Tableau de bord</div>
+  <a href="../../index.html" class="">🌍 Vue d'ensemble</a>
+  <div class="groupe" style="margin-top:6px">Sites</div>
+  <a class="sous " href="../../site/BIAKATO/index.html">📍 Biakato</a><a class="sous " href="../../site/BUTA/index.html">📍 Buta</a><a class="sous " href="../../site/BUTEMBO/index.html">📍 Butembo</a><a class="sous " href="../../site/ISIRO/index.html">📍 Isiro</a><a class="sous " href="../../site/KISANGANI/index.html">📍 Kisangani</a><a class="sous " href="../../site/SUD-UBANGI/index.html">📍 Sud-Ubangi</a>
+  <div class="groupe" style="margin-top:6px">Analyses tous sites</div>
+  <a class="sous " href="../../confirmes/index.html">Cas confirmés</a>
+  <a class="sous actif" href="../index.html">PEP</a>
+  <a class="sous " href="../../securite/index.html">Sécurité (EI)</a>
+  <a class="sous " href="../../suivi/index.html">Suivi clinique & PCR</a>
+  
+
+  <div class="groupe">Modélisation du décès</div>
+  <a class="sous " href="../../modelisation/index.html">1 - Firth et survie</a>
+  <a class="sous " href="../../modelisation-temps/index.html">2 - Facteurs dans le temps</a>
+
+  <div class="groupe">Données</div>
+  <a href="../../donnees/index.html" class="">✔ Contrôle qualité</a>
+  <a class="sous " href="../../donnees/site-BIAKATO/index.html">Biakato</a><a class="sous " href="../../donnees/site-BUTA/index.html">Buta</a><a class="sous " href="../../donnees/site-BUTEMBO/index.html">Butembo</a><a class="sous " href="../../donnees/site-ISIRO/index.html">Isiro</a><a class="sous " href="../../donnees/site-KISANGANI/index.html">Kisangani</a><a class="sous " href="../../donnees/site-SUD-UBANGI/index.html">Sud-Ubangi</a>
+  
+
+  <div class="groupe">Version statique<small>Instantané des données au 14/11/2026 ; données agrégées, sans identifiant de participant.</small></div>
+  
+</aside>
+<div class="contenu">
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <div><button class="btn sec petit" id="bouton-menu" type="button" aria-label="Ouvrir le menu">☰ Menu</button>
+      <h1 style="display:inline">Contacts sous PEP (tous sites)</h1><br>
+      <small>MEURI RDC - protocole EAP · données au <b>14/11/2026</b> · dernier import : MEURIRemdesivirMBP13_DATA_LABELS_2026-11-14_1428.csv (14/11/2026 17:50)</small></div>
+    
+  </div>
+</div></header>
+<main class="wrap">
+
+
+<div class="info">Filtre : site = <b>Sud-Ubangi</b></div>
+
+
+
+<div class="kpis">
+  <div class="kpi"><b>24</b><span>contacts inclus en PEP</span></div>
+  <div class="kpi"><b>24</b><span>ayant reçu au moins une perfusion</span></div>
+  <div class="kpi"><b>16 j</b><span>délai médian exposition → 1re perfusion</span></div>
+  <div class="kpi"><b>0,0 %</b><span>traités dans les 2 jours</span></div>
+  <div class="kpi bon"><b>0</b><span>décès déclarés</span></div>
+</div>
+
+
+<div class="grid">
+  <div class="card"><h3>Niveau de risque de l'exposition</h3><div class="chart h200"><canvas id="g-risque"></canvas></div><table class="t">
+  <thead><tr><th>Risque</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Haut</td><td>17</td><td>70,8</td></tr><tr><td>Intermédiaire</td><td>7</td><td>29,2</td></tr>
+  <tr class="tot"><td>Total</td><td>24</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Mode d'exposition (si exposition directe)</h3><table class="t">
+  <thead><tr><th>Mode</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Autre</td><td>7</td><td>70,0</td></tr><tr><td>Eclaboussure de liquide corporel sur une peau intacte</td><td>2</td><td>20,0</td></tr><tr><td>Piqûre d&#x27;aiguille</td><td>1</td><td>10,0</td></tr>
+  <tr class="tot"><td>Total</td><td>10</td><td>100</td></tr>
+  </tbody>
+</table>
+
+    <table class="t">
+  <thead><tr><th>Exposition directe rapportée</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Non</td><td>14</td><td>58,3</td></tr><tr><td>Oui</td><td>10</td><td>41,7</td></tr>
+  <tr class="tot"><td>Total</td><td>24</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+<div class="grid" style="margin-top:16px">
+  <div class="card"><h3>Délai exposition → 1re perfusion</h3><div class="chart h200"><canvas id="g-delai"></canvas></div>
+    <div class="scroll"><table class="t">
+  <thead><tr><th>Délai (jours)</th><th>n</th><th>Moyenne</th><th>Écart-type</th><th>Min</th><th>Q1</th><th>Médiane</th><th>Q3</th><th>Max</th></tr></thead>
+  <tbody>
+  <tr><td class="txt">Exposition → 1re perfusion</td><td>3</td><td>17,3</td><td>3,2</td>
+    <td>15</td><td>15,5</td><td><b>16</b></td><td>18,5</td><td>21</td></tr>
+  </tbody>
+</table></div>
+</div>
+  <div class="card"><h3>Nombre de perfusions reçues</h3><div class="chart h200"><canvas id="g-schema"></canvas></div>
+    <div class="scroll"><table class="t">
+  <thead><tr><th>Variable</th><th>n</th><th>Moyenne</th><th>Écart-type</th><th>Min</th><th>Q1</th><th>Médiane</th><th>Q3</th><th>Max</th></tr></thead>
+  <tbody>
+  <tr><td class="txt">Nombre de perfusions</td><td>24</td><td>8,7</td><td>2,8</td>
+    <td>1</td><td>9,8</td><td><b>10</b></td><td>10</td><td>10</td></tr><tr><td class="txt">Dose totale (mg)</td><td>24</td><td>958,3</td><td>281,2</td>
+    <td>200</td><td>1000</td><td><b>1100</b></td><td>1100</td><td>1100</td></tr>
+  </tbody>
+</table></div>
+</div>
+</div>
+<div class="card" style="margin-top:16px"><h3>Début des PEP par semaine</h3><div class="chart"><canvas id="g-courbe"></canvas></div></div>
+<div class="grid-3" style="margin-top:16px">
+  <div class="card"><h3>PEP administrée</h3><table class="t">
+  <thead><tr><th>Administrée</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Oui</td><td>24</td><td>100,0</td></tr>
+  <tr class="tot"><td>Total</td><td>24</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Traitement</h3><table class="t">
+  <thead><tr><th>Traitement</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Remdesivir</td><td>23</td><td>95,8</td></tr><tr><td>Remdesivir + MBP134</td><td>1</td><td>4,2</td></tr>
+  <tr class="tot"><td>Total</td><td>24</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Vaccination Ebola antérieure</h3><table class="t">
+  <thead><tr><th>Vacciné</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Non</td><td>13</td><td>54,2</td></tr><tr><td>Oui</td><td>11</td><td>45,8</td></tr>
+  <tr class="tot"><td>Total</td><td>24</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Vivant au dernier suivi</h3><table class="t">
+  <thead><tr><th>Vivant</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Oui</td><td>24</td><td>100,0</td></tr>
+  <tr class="tot"><td>Total</td><td>24</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Étude terminée</h3><table class="t">
+  <thead><tr><th>Terminée</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Oui</td><td>20</td><td>83,3</td></tr><tr><td>Non</td><td>4</td><td>16,7</td></tr>
+  <tr class="tot"><td>Total</td><td>24</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Sexe</h3><table class="t">
+  <thead><tr><th>Sexe</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Masculin</td><td>22</td><td>91,7</td></tr><tr><td>Féminin</td><td>2</td><td>8,3</td></tr>
+  <tr class="tot"><td>Total</td><td>24</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+<h2>Par site</h2>
+<div class="card scroll"><table class="t"><thead><tr><th>Site</th><th>Contacts</th><th>Traités</th><th>Risque élevé</th><th>Délai médian (j)</th><th>Avec EI</th><th>Vivants au suivi</th></tr></thead>
+  <tbody><tr><td>Sud-Ubangi</td><td>24</td><td>24</td><td>17</td><td>16</td><td>24</td><td>24</td></tr></tbody></table></div>
+<script id="data-p" type="application/json">{"n": 24, "age": {"nom": "\u00c2ge (ans)", "n": 24, "moyenne": 41.0, "ecart_type": 12.6, "min": 19.0, "q1": 32.5, "mediane": 38.0, "q3": 50.0, "max": 72.0}, "sexe": {"lignes": [{"modalite": "Masculin", "n": 22, "pct": 91.7}, {"modalite": "F\u00e9minin", "n": 2, "pct": 8.3}], "total": 24, "labels": ["Masculin", "F\u00e9minin"], "valeurs": [22, 2]}, "site": {"lignes": [{"modalite": "SUD-UBANGI", "n": 24, "pct": 100.0}], "total": 24, "labels": ["SUD-UBANGI"], "valeurs": [24]}, "risque": {"lignes": [{"modalite": "Haut", "n": 17, "pct": 70.8}, {"modalite": "Interm\u00e9diaire", "n": 7, "pct": 29.2}], "total": 24, "labels": ["Haut", "Interm\u00e9diaire"], "valeurs": [17, 7]}, "mode": {"lignes": [{"modalite": "Autre", "n": 7, "pct": 70.0}, {"modalite": "Eclaboussure de liquide corporel sur une peau intacte", "n": 2, "pct": 20.0}, {"modalite": "Piq\u00fbre d'aiguille", "n": 1, "pct": 10.0}], "total": 10, "labels": ["Autre", "Eclaboussure de liquide corporel sur une peau intacte", "Piq\u00fbre d'aiguille"], "valeurs": [7, 2, 1]}, "expo": {"lignes": [{"modalite": "Non", "n": 14, "pct": 58.3}, {"modalite": "Oui", "n": 10, "pct": 41.7}], "total": 24, "labels": ["Non", "Oui"], "valeurs": [14, 10]}, "administree": {"lignes": [{"modalite": "Oui", "n": 24, "pct": 100.0}], "total": 24, "labels": ["Oui"], "valeurs": [24]}, "traitement": {"lignes": [{"modalite": "Remdesivir", "n": 23, "pct": 95.8}, {"modalite": "Remdesivir + MBP134", "n": 1, "pct": 4.2}], "total": 24, "labels": ["Remdesivir", "Remdesivir + MBP134"], "valeurs": [23, 1]}, "vaccin": {"lignes": [{"modalite": "Non", "n": 13, "pct": 54.2}, {"modalite": "Oui", "n": 11, "pct": 45.8}], "total": 24, "labels": ["Non", "Oui"], "valeurs": [13, 11]}, "schema": {"lignes": [{"modalite": "1 perfusion", "n": 1, "pct": 4.2}, {"modalite": "2 \u00e0 9 perfusions", "n": 5, "pct": 20.8}, {"modalite": "10 perfusions ou plus", "n": 18, "pct": 75.0}], "total": 24, "labels": ["1 perfusion", "2 \u00e0 9 perfusions", "10 perfusions ou plus"], "valeurs": [1, 5, 18]}, "delai": {"nom": "Exposition \u2192 1re perfusion", "n": 3, "moyenne": 17.3, "ecart_type": 3.2, "min": 15.0, "q1": 15.5, "mediane": 16.0, "q3": 18.5, "max": 21.0}, "delai_liste": [{"nom": "Exposition \u2192 1re perfusion", "n": 3, "moyenne": 17.3, "ecart_type": 3.2, "min": 15.0, "q1": 15.5, "mediane": 16.0, "q3": 18.5, "max": 21.0}], "delai_classes": {"lignes": [{"modalite": "10 j et +", "n": 3, "pct": 12.5}, {"modalite": "Non renseign\u00e9", "n": 21, "pct": 87.5}], "total": 24, "labels": ["10 j et +", "Non renseign\u00e9"], "valeurs": [3, 21]}, "pct_2j": 0.0, "perfusions": [{"nom": "Nombre de perfusions", "n": 24, "moyenne": 8.7, "ecart_type": 2.8, "min": 1.0, "q1": 9.8, "mediane": 10.0, "q3": 10.0, "max": 10.0}, {"nom": "Dose totale (mg)", "n": 24, "moyenne": 958.3, "ecart_type": 281.2, "min": 200.0, "q1": 1000.0, "mediane": 1100.0, "q3": 1100.0, "max": 1100.0}], "vivant": {"lignes": [{"modalite": "Oui", "n": 24, "pct": 100.0}], "total": 24, "labels": ["Oui"], "valeurs": [24]}, "termine": {"lignes": [{"modalite": "Oui", "n": 20, "pct": 83.3}, {"modalite": "Non", "n": 4, "pct": 16.7}], "total": 24, "labels": ["Oui", "Non"], "valeurs": [20, 4]}, "traites": 24, "deces": 0, "par_site": [{"site": "SUD-UBANGI", "n": 24, "traites": 24, "ei": 24, "haut": 17, "delai": 16.0, "vivants": 24}], "courbe": {"labels": ["31/08", "07/09", "14/09", "21/09", "28/09", "05/10"], "valeurs": [1, 0, 3, 13, 1, 6]}}</script>
+
+
+</main>
+</div>
+</div>
+<script>
+(function(){ const m = document.getElementById("menu"), b = document.getElementById("bouton-menu");
+  b.addEventListener("click", e => { e.stopPropagation(); m.classList.toggle("ouvert"); });
+  document.addEventListener("click", e => { if (m.classList.contains("ouvert") && !m.contains(e.target)) m.classList.remove("ouvert"); }); })();
+</script>
+<script>
+const COUL = ["#2a78d6","#eb6834","#1baf7a","#eda100","#6250d6","#e87ba4","#008300","#e34948"];
+Chart.defaults.font.family = 'system-ui,"Segoe UI",sans-serif';
+Chart.defaults.color = "#52514e";
+Chart.defaults.borderColor = "#ebeae6";
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.maintainAspectRatio = false;
+const fr = (v, d=1) => v == null ? "-" : Number(v).toLocaleString("fr-FR", {maximumFractionDigits:d});
+function lire(id){ const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; }
+// barres horizontales d'une distribution {labels, valeurs, lignes:[{pct}]}
+function barresH(id, f, couleur=COUL[0], titre=""){
+  const el = document.getElementById(id); if(!el || !f) return;
+  const total = f.valeurs.reduce((a,b)=>a+b,0);
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{label:titre||"Effectif", data:f.valeurs,
+    backgroundColor:couleur, borderRadius:4, barThickness:18}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw} (${fr(100*c.raw/total)} %)`}}},
+      scales:{x:{beginAtZero:true, ticks:{precision:0}}, y:{grid:{display:false}}}}});
+}
+// barres horizontales en % (valeurs déjà en %), ex. symptômes
+function barresPct(id, f, couleur=COUL[0]){
+  const el = document.getElementById(id); if(!el || !f || !f.labels.length) return;
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{data:f.valeurs, backgroundColor:couleur, borderRadius:4, barThickness:14}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fr(c.raw)} % (${f.lignes[c.dataIndex].n}/${f.total})`}}},
+      scales:{x:{beginAtZero:true, max:100, title:{display:true,text:"% des participants"}}, y:{grid:{display:false}}}}});
+}
+// courbes : series = [{label, data, couleur}]
+function courbes(id, labels, series, titreY="", opts={}){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"line", data:{labels, datasets:series.map((s,i)=>({label:s.label, data:s.data, borderColor:s.couleur||COUL[i],
+      backgroundColor:s.couleur||COUL[i], borderWidth:2, pointRadius:3, spanGaps:true, yAxisID:"y"}))},
+    options:{interaction:{mode:"index", intersect:false}, scales:{y:{title:{display:true,text:titreY}, ...(opts.y||{})}, x:{grid:{display:false}, ...(opts.x||{})}}}});
+}
+function barresV(id, labels, valeurs, couleur=COUL[0], titre="Effectif"){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"bar", data:{labels, datasets:[{label:titre, data:valeurs, backgroundColor:couleur, borderRadius:3, maxBarThickness:28}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}, title:{display:true,text:titre}}, x:{grid:{display:false}}}}});
+}
+</script>
+
+<script>
+const p = lire("data-p");
+if (p){
+  barresH("g-risque", p.risque, COUL[1]); barresH("g-delai", p.delai_classes, COUL[2]); barresH("g-schema", p.schema, COUL[0]);
+  barresV("g-courbe", p.courbe.labels, p.courbe.valeurs, COUL[2], "Contacts");
+}
+</script>
+
+</body>
+</html>

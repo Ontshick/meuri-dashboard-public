@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protocole EAP - modèles prédictifs · MEURI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#8a8984; --line:#e4e3de;
+  --accent:#2a78d6; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#6250d6;
+  --ok:#1baf7a; --warn-bg:#fff6e0; --warn:#c98500; --err-bg:#fdecec; --err:#c03a39; --ok-bg:#e6f6ef;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.5 system-ui,"Segoe UI",sans-serif}
+/* ---- mise en page : menu latéral gauche + contenu ---- */
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+aside.menu{background:#14213d;color:#dfe5ef;position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px 30px}
+aside.menu .logo{padding:4px 10px 14px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:10px}
+aside.menu .logo b{display:block;font-size:16px;color:#fff} aside.menu .logo span{font-size:12px;color:#9fb0c9}
+aside.menu .groupe{margin:14px 0 4px;padding:0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8ea3c2;font-weight:700}
+aside.menu .groupe small{display:block;text-transform:none;letter-spacing:0;font-weight:400;color:#7d90ad}
+aside.menu a{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 0;border-radius:6px;color:#dfe5ef;text-decoration:none;font-size:14px}
+aside.menu a:hover{background:rgba(255,255,255,.07)}
+aside.menu a.actif{background:#2a78d6;color:#fff;font-weight:600}
+aside.menu a.sous{padding-left:28px;font-size:13.5px;color:#c4cfdf}
+aside.menu a.sous.actif{color:#fff}
+aside.menu .pastille{margin-left:auto;font-size:11px;background:rgba(255,255,255,.12);border-radius:8px;padding:0 6px}
+.contenu{min-width:0}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.wrap{max-width:1240px;margin:0 auto;padding:0 22px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;flex-wrap:wrap}
+.brand h1{font-size:19px;margin:0} .brand small{color:var(--ink2)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+#bouton-menu{display:none}
+main{padding:22px 0 60px}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  aside.menu{position:fixed;left:0;top:0;width:260px;z-index:30;transform:translateX(-100%);transition:transform .2s}
+  aside.menu.ouvert{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  #bouton-menu{display:inline-block}
+  .wrap{padding:0 16px}
+}
+h2{font-size:20px;margin:30px 0 12px} h2:first-child{margin-top:0} h3{font-size:16px;margin:0 0 10px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.grid-3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.2} .kpi span{color:var(--ink2);font-size:13px}
+.kpi.alerte b{color:var(--err)} .kpi.bon b{color:var(--ok)}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td.txt,table.t th.txt{text-align:left;white-space:normal}
+table.t thead th{border-bottom:2px solid var(--ink2);color:var(--ink2);font-weight:600}
+table.t tr.tot td{font-weight:600;border-top:2px solid var(--line)}
+.scroll{overflow-x:auto}
+.chart{position:relative;height:260px} .chart.h320{height:320px} .chart.h200{height:200px}
+.note{background:var(--warn-bg);border-left:3px solid var(--s4);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.info{background:#eaf2fc;border-left:3px solid var(--accent);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.msg{padding:10px 14px;border-radius:6px;margin-bottom:14px} .msg.success{background:var(--ok-bg)} .msg.error{background:var(--err-bg)}
+.muted{color:var(--ink2)} .petit{font-size:12.5px}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:var(--line)}
+.badge.dc{background:var(--err-bg);color:var(--err)} .badge.ok{background:var(--ok-bg);color:#0d7a52}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer;text-decoration:none}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+form.filtres{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+form.filtres label{display:block;font-size:12px;color:var(--ink2)}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.vide{text-align:center;padding:60px 20px}
+.methodo ol.etapes{padding-left:18px;margin:6px 0} .methodo ol.etapes li{margin-bottom:8px}
+.methodo details{margin-top:8px} .methodo summary{cursor:pointer;color:var(--accent)}
+section.interpretation{margin-top:30px;padding:18px;border-radius:12px;background:#eef5fd;border:2px solid #b9d4f3}
+section.interpretation h2{margin-top:0;color:#1d5fae}
+section.interpretation .card ul{padding-left:18px;margin:0} section.interpretation .card li{margin-bottom:6px}
+section.interpretation .card.conclusion{border:2px solid #1d5fae;grid-column:1 / -1}
+.sommaire{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px} .sommaire a{font-size:13px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+</style>
+
+</head>
+<body>
+<div class="app">
+<aside class="menu" id="menu">
+  <div class="logo"><b>MEURI RDC - Ebola</b><span>Protocole EAP Remdesivir / MBP134 · REDCap</span></div>
+
+  <div class="groupe">Tableau de bord</div>
+  <a href="../../index.html" class="">🌍 Vue d'ensemble</a>
+  <div class="groupe" style="margin-top:6px">Sites</div>
+  <a class="sous " href="../../site/BIAKATO/index.html">📍 Biakato</a><a class="sous " href="../../site/BUTA/index.html">📍 Buta</a><a class="sous " href="../../site/BUTEMBO/index.html">📍 Butembo</a><a class="sous " href="../../site/ISIRO/index.html">📍 Isiro</a><a class="sous " href="../../site/KISANGANI/index.html">📍 Kisangani</a><a class="sous " href="../../site/SUD-UBANGI/index.html">📍 Sud-Ubangi</a>
+  <div class="groupe" style="margin-top:6px">Analyses tous sites</div>
+  <a class="sous " href="../../confirmes/index.html">Cas confirmés</a>
+  <a class="sous " href="../../pep/index.html">PEP</a>
+  <a class="sous " href="../../securite/index.html">Sécurité (EI)</a>
+  <a class="sous " href="../../suivi/index.html">Suivi clinique & PCR</a>
+  
+
+  <div class="groupe">Modélisation du décès</div>
+  <a class="sous actif" href="../index.html">1 - Firth et survie</a>
+  <a class="sous " href="../../modelisation-temps/index.html">2 - Facteurs dans le temps</a>
+
+  <div class="groupe">Données</div>
+  <a href="../../donnees/index.html" class="">✔ Contrôle qualité</a>
+  <a class="sous " href="../../donnees/site-BIAKATO/index.html">Biakato</a><a class="sous " href="../../donnees/site-BUTA/index.html">Buta</a><a class="sous " href="../../donnees/site-BUTEMBO/index.html">Butembo</a><a class="sous " href="../../donnees/site-ISIRO/index.html">Isiro</a><a class="sous " href="../../donnees/site-KISANGANI/index.html">Kisangani</a><a class="sous " href="../../donnees/site-SUD-UBANGI/index.html">Sud-Ubangi</a>
+  
+
+  <div class="groupe">Version statique<small>Instantané des données au 14/11/2026 ; données agrégées, sans identifiant de participant.</small></div>
+  
+</aside>
+<div class="contenu">
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <div><button class="btn sec petit" id="bouton-menu" type="button" aria-label="Ouvrir le menu">☰ Menu</button>
+      <h1 style="display:inline">Modélisation 1 - décès (Firth, survie)</h1><br>
+      <small>MEURI RDC - protocole EAP · données au <b>14/11/2026</b> · dernier import : MEURIRemdesivirMBP13_DATA_LABELS_2026-11-14_1428.csv (14/11/2026 17:50)</small></div>
+    
+  </div>
+</div></header>
+<main class="wrap">
+
+
+<nav class="sommaire"><a class="btn sec" href="#methodologie">1. Méthodologie</a><a class="btn sec" href="#resultats">2. Résultats</a>
+  <a class="btn sec" href="#interpretation">3. Interprétation</a></nav>
+<div id="methodologie"><section class="card methodo">
+  <h2 style="margin-top:0">Méthodologie</h2>
+  <div class="grid">
+    <div><h3>La question</h3><p>Parmi les cas confirmés de maladie à virus Ebola, quels éléments mesurés à l&#x27;arrivée du patient permettent d&#x27;anticiper le risque de décès ? On teste deux candidats simples et disponibles partout : la charge virale initiale (mesurée par le Ct GP à l&#x27;inclusion) et l&#x27;âge.</p></div>
+    <div><h3>Les patients analysés</h3><p>Cas confirmés du protocole d&#x27;accès étendu (6 sites, export REDCap). La régression logistique utilise les patients dont l&#x27;issue est connue (sortis guéris ou décédés) et qui ont un Ct et un âge renseignés.</p></div>
+  </div>
+  <h3 style="margin-top:8px">La démarche en 4 étapes</h3>
+  <ol class="etapes"><li><b>1. Préparer les données</b><br>Chaque patient devient une ligne : son issue (décès oui/non), son Ct, son âge et sa durée de suivi. Les valeurs impossibles (Ct hors 10–45, dates incohérentes) sont écartées et listées dans « Qualité des données ».</li><li><b>2. Estimer le risque de décès : régression logistique de Firth</b><br>La régression logistique relie la probabilité de décès aux variables explicatives. Avec très peu de décès, la version classique exagère les effets ; la correction de Firth (vraisemblance pénalisée) réduit ce biais. Trois modèles sont comparés : Ct seul (M1), âge seul (M2), Ct + âge (M3, exploratoire).</li><li><b>3. Vérifier la qualité de prédiction : validation par bootstrap</b><br>On réestime le modèle 200 fois sur des échantillons tirés au sort dans les données. L&#x27;AUC corrigée qui en résulte indique ce que le modèle vaudrait sur de nouveaux patients (un modèle évalué sur ses propres données paraît toujours meilleur).</li><li><b>4. Tenir compte du moment du décès : analyse de survie</b><br>Les courbes de Kaplan-Meier montrent la proportion de patients encore en vie chaque jour depuis la 1re perfusion, par groupe. Le test du log-rank vérifie si les courbes diffèrent. Le modèle de Cox mesure l&#x27;effet de chaque variable sur le risque de décès à chaque instant. Les patients sortis guéris sont considérés en vie jusqu&#x27;à J28 ; ceux dont le suivi est incomplet sont « censurés » (pris en compte jusqu&#x27;à leur dernière information).</li></ol>
+  <details><summary><b>Comment lire les résultats (OR, HR, IC 95 %, p, AUC…)</b></summary>
+    <table class="t" style="margin-top:8px"><tbody><tr><td class="txt" style="width:220px"><b>OR (odds ratio, rapport de cotes)</b></td><td class="txt">Multiplie la « cote » de décès quand la variable augmente d&#x27;une unité. OR &gt; 1 : risque plus élevé ; OR &lt; 1 : risque plus faible ; OR = 1 : pas d&#x27;effet.</td></tr><tr><td class="txt" style="width:220px"><b>HR (hazard ratio)</b></td><td class="txt">Équivalent de l&#x27;OR pour l&#x27;analyse de survie : multiplie le risque instantané de décès.</td></tr><tr><td class="txt" style="width:220px"><b>IC 95 % (intervalle de confiance)</b></td><td class="txt">Fourchette des valeurs plausibles. S&#x27;il contient 1, on ne peut pas conclure à un effet.</td></tr><tr><td class="txt" style="width:220px"><b>p (valeur p)</b></td><td class="txt">Probabilité d&#x27;observer un tel écart par hasard s&#x27;il n&#x27;y avait aucun effet. Conventionnellement, p &lt; 0,05 = « significatif ».</td></tr><tr><td class="txt" style="width:220px"><b>AUC</b></td><td class="txt">Capacité à distinguer décédés et survivants : 0,5 = hasard, 0,7 = acceptable, 0,8 = bon, 1 = parfait.</td></tr><tr><td class="txt" style="width:220px"><b>Score de Brier</b></td><td class="txt">Erreur moyenne des probabilités prédites (0 = parfait ; plus il est bas, mieux c&#x27;est).</td></tr><tr><td class="txt" style="width:220px"><b>C de Harrell</b></td><td class="txt">Équivalent de l&#x27;AUC pour le modèle de Cox.</td></tr></tbody></table>
+  </details>
+</section>
+
+<h2>Variables du modèle</h2>
+<div class="card scroll"><table class="t">
+  <thead><tr><th class="txt">Variable</th><th class="txt">Rôle dans le modèle</th><th class="txt">Définition</th><th class="txt">Codage</th><th class="txt">Source</th></tr></thead>
+  <tbody><tr><td class="txt"><b>Décès</b></td><td class="txt">Variable à expliquer</td><td class="txt">Issue du patient.</td><td class="txt">1 = décédé (date de décès renseignée ou « vivant au suivi : non »), 0 = sorti guéri (date de sortie). Les patients encore hospitalisés ou sans issue sont exclus de la logistique.</td><td class="txt petit">REDCap : formulaires décès / fin d&#x27;étude / sortie</td></tr><tr><td class="txt"><b>Ct GP à l&#x27;inclusion</b></td><td class="txt">Explicative (M1, M3, Cox 1 et 3)</td><td class="txt">Cycle threshold de la cible GP au prélèvement d&#x27;inclusion (champ 5.2.2 ctGP). Plus il est bas, plus la charge virale est élevée.</td><td class="txt">(30 − Ct) / 5 : +1 = Ct plus bas de 5 cycles. Valeurs hors 10–45 exclues.</td><td class="txt petit">REDCap, fiche principale</td></tr><tr><td class="txt"><b>Âge</b></td><td class="txt">Explicative (M2, M3, Cox 2 et 3)</td><td class="txt">Âge du patient en années à l&#x27;inclusion.</td><td class="txt">(âge − 40) / 10 : +1 = 10 ans de plus.</td><td class="txt petit">Date de naissance, sinon champ « OU Année » (année de naissance ou âge)</td></tr><tr><td class="txt"><b>Temps de survie</b></td><td class="txt">Durée (Kaplan-Meier, Cox)</td><td class="txt">Jours entre la 1re perfusion (sinon l&#x27;inclusion) et le décès.</td><td class="txt">Sortis guéris censurés à J28 ; autres patients censurés au dernier contact.</td><td class="txt petit">Formulaires perfusion, décès, sortie, fin d&#x27;étude</td></tr><tr><td class="txt"><b>Groupe de comparaison</b></td><td class="txt">Courbes de Kaplan-Meier, log-rank</td><td class="txt">Au choix : traitement (Remdesivir / MBP134), site, ou charge virale (Ct GP sous / au-dessus d&#x27;un seuil réglable).</td><td class="txt">Catégories</td><td class="txt petit">Dispensation (traitement déduit des doses si absent), Data Access Group</td></tr></tbody>
+</table>
+<p class="petit muted">Le centrage (Ct 30, 40 ans) et les unités « 5 cycles » / « 10 ans » rendent les OR et HR lisibles ; ils ne changent pas les conclusions.</p></div>
+</div>
+<h2 id="resultats" style="margin-top:34px;font-size:23px">Résultats</h2>
+<h2>Régression logistique de Firth (décès oui/non)</h2>
+
+
+<div class="kpis">
+  <div class="kpi"><b>OR 1,11</b><span>Ct GP plus bas de 5 cycles (IC 95 % 0,42–5,29, p = 0,84)</span></div>
+  <div class="kpi"><b>OR 1,09</b><span>âge +10 ans (p = 0,74)</span></div>
+  <div class="kpi"><b>0,43</b><span>AUC corrigée du modèle Ct</span></div>
+  <div class="kpi"><b>29 / 8</b><span>issues connues avec Ct et âge / décès</span></div>
+</div>
+
+<div class="grid-3">
+
+  <div class="card"><h3>M1 : Ct seul</h3><table class="t">
+    <thead><tr><th>Variable</th><th>OR</th><th>IC 95 %</th><th>p</th></tr></thead>
+    <tbody><tr><td class="txt">Constante</td><td><b>0,39</b></td><td>0,13 – 0,89</td><td>0,025</td></tr><tr><td class="txt">Ct GP plus bas de 5 cycles</td><td><b>1,11</b></td><td>0,42 – 5,29</td><td>0,842</td></tr></tbody></table>
+    <p class="petit muted">AUC 0,50 (corrigée 0,43) · Brier 0,199 · 8 décès/variable</p></div>
+
+  <div class="card"><h3>M2 : Âge seul</h3><table class="t">
+    <thead><tr><th>Variable</th><th>OR</th><th>IC 95 %</th><th>p</th></tr></thead>
+    <tbody><tr><td class="txt">Constante</td><td><b>0,43</b></td><td>0,18 – 0,95</td><td>0,035</td></tr><tr><td class="txt">Âge (+10 ans)</td><td><b>1,09</b></td><td>0,67 – 1,83</td><td>0,738</td></tr></tbody></table>
+    <p class="petit muted">AUC 0,55 (corrigée 0,45) · Brier 0,199 · 8 décès/variable</p></div>
+
+  <div class="card"><h3>M3 : Ct + âge (exploratoire)</h3><table class="t">
+    <thead><tr><th>Variable</th><th>OR</th><th>IC 95 %</th><th>p</th></tr></thead>
+    <tbody><tr><td class="txt">Constante</td><td><b>0,43</b></td><td>0,14 – 1,03</td><td>0,058</td></tr><tr><td class="txt">Ct GP plus bas de 5 cycles</td><td><b>1,09</b></td><td>0,40 – 5,12</td><td>0,878</td></tr><tr><td class="txt">Âge (+10 ans)</td><td><b>1,06</b></td><td>0,66 – 1,78</td><td>0,803</td></tr></tbody></table>
+    <p class="petit muted">AUC 0,54 (corrigée 0,39) · Brier 0,199 · 4 décès/variable</p></div>
+
+</div>
+<div class="grid" style="margin-top:16px">
+  <div class="card"><h3>Probabilité de décès selon le Ct GP (M1)</h3><div class="chart h320"><canvas id="g-logit"></canvas></div></div>
+  <div class="card"><h3>Courbes ROC (apparentes)</h3><div class="chart h320"><canvas id="g-roc"></canvas></div></div>
+</div>
+
+
+<h2>Analyse de survie</h2>
+<div class="card filtres" style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+  <span class="petit muted">Comparer les courbes selon :</span>
+  <a class="btn " href="index.html">le traitement</a>
+  <a class="btn sec" href="../groupement-site/index.html">le site</a>
+  <a class="btn sec" href="../groupement-ct/index.html">la charge virale (Ct GP, seuil 27)</a>
+</div>
+
+
+<p class="petit muted">1 décès sans date exploitable exclu de l'analyse de survie.</p>
+<div class="grid">
+  <div class="card"><h3>Kaplan-Meier (77 cas, 12 décès)</h3><div class="chart h320"><canvas id="g-km"></canvas></div>
+    <p>Log-rank : χ² = 1,17 (2 ddl), <b>p = 0,557</b>
+      <span class="badge">non significatif</span></p></div>
+  <div class="card"><h3>Groupes</h3><div class="scroll"><table class="t">
+    <thead><tr><th>Groupe</th><th>n</th><th>Décès</th><th>Survie à J28</th></tr></thead>
+    <tbody><tr><td>Mbp134</td><td>3</td><td>1</td><td><b>66,7 %</b></td></tr><tr><td>Non Renseigné</td><td>11</td><td>2</td><td><b>81,8 %</b></td></tr><tr><td>Remdesivir</td><td>63</td><td>9</td><td><b>84,5 %</b></td></tr></tbody></table></div>
+    <h3 style="margin-top:14px">Patients à risque</h3><div class="scroll"><table class="t">
+    <thead><tr><th>Jour</th><th>J0</th><th>J4</th><th>J8</th><th>J12</th><th>J16</th><th>J20</th><th>J24</th><th>J28</th></tr></thead>
+    <tbody><tr><td>Mbp134</td><td>3</td><td>2</td><td>2</td><td>2</td><td>2</td><td>2</td><td>2</td><td>2</td></tr><tr><td>Non Renseigné</td><td>11</td><td>8</td><td>6</td><td>5</td><td>5</td><td>4</td><td>4</td><td>4</td></tr><tr><td>Remdesivir</td><td>63</td><td>61</td><td>50</td><td>41</td><td>40</td><td>40</td><td>40</td><td>40</td></tr></tbody></table></div></div>
+</div>
+<div class="card" style="margin-top:16px"><h3>Modèles de Cox</h3><div class="scroll"><table class="t">
+  <thead><tr><th>Modèle</th><th>n</th><th>Décès</th><th class="txt">Variable</th><th>HR</th><th>IC 95 %</th><th>p</th></tr></thead>
+  <tbody><tr><td>Cox 1 : Ct</td><td>38</td><td>8</td><td class="txt">Ct GP plus bas de 5 cycles</td><td><b>1,18</b></td><td>0,35 – 3,98</td><td>0,791</td></tr><tr><td>Cox 2 : Âge</td><td>74</td><td>12</td><td class="txt">Âge (+10 ans)</td><td><b>1,45</b></td><td>0,92 – 2,27</td><td>0,109</td></tr><tr><td>Cox 3 : Ct + âge (exploratoire)</td><td>38</td><td>8</td><td class="txt">Ct GP plus bas de 5 cycles</td><td><b>1,12</b></td><td>0,32 – 3,94</td><td>0,859</td></tr><tr><td>Cox 3 : Ct + âge (exploratoire)</td><td>38</td><td>8</td><td class="txt">Âge (+10 ans)</td><td><b>1,19</b></td><td>0,75 – 1,89</td><td>0,461</td></tr></tbody></table></div>
+  <p>Concordance (Cox 1) : C = 0,50 · risques proportionnels : ρ = -0,17, p = 0,69.</p></div>
+
+<section class="interpretation" id="interpretation">
+  <h2>Interprétation des résultats</h2>
+  <p class="petit muted">Cet espace est réservé à la lecture des résultats ci-dessus, en langage courant. Il est généré automatiquement
+  à partir des chiffres : il se met à jour à chaque import ou correction des données (et selon le regroupement choisi pour la survie).</p>
+  <div class="grid">
+  <div class="card "><h3>Charge virale (Ct GP)</h3>
+    <ul><li>Pas d&#x27;association démontrée entre le Ct GP et le décès (OR 1,11, IC 95 % 0,42–5,29, p = 0,842) : l&#x27;intervalle de confiance contient 1. Cela ne prouve pas l&#x27;absence d&#x27;effet, mais les données ne permettent pas de le mettre en évidence.</li></ul></div><div class="card "><h3>Âge</h3>
+    <ul><li>Pas d&#x27;association démontrée entre l&#x27;âge et le décès (OR 1,09, IC 95 % 0,67–1,83, p = 0,738) : l&#x27;intervalle de confiance contient 1. Cela ne prouve pas l&#x27;absence d&#x27;effet, mais les données ne permettent pas de le mettre en évidence.</li><li>Ajouter l&#x27;âge au modèle (M3) ne fait pas apparaître d&#x27;effet du Ct GP (OR 1,09, p = 0,878). Ce modèle reste exploratoire (4,0 décès par variable, moins que les 10 recommandés).</li></ul></div><div class="card "><h3>Qualité de prédiction</h3>
+    <ul><li>Le modèle fondé sur le Ct GP ne distingue pas mieux que le hasard les patients qui décèdent de ceux qui survivent (AUC corrigée 0,43 ; AUC apparente 0,50, optimisme 0,07).</li><li>Le modèle fondé sur l&#x27;âge ne distingue pas mieux que le hasard (AUC corrigée 0,45).</li><li>Ajouter l&#x27;âge au Ct GP donne une AUC corrigée de 0,39 : pas de gain de prédiction.</li><li>Sans correction de Firth, l&#x27;OR du Ct GP serait de 1,38 au lieu de 1,11 : c&#x27;est l&#x27;exagération typique des petits échantillons que la méthode corrige.</li></ul></div><div class="card "><h3>Survie</h3>
+    <ul><li>Survie estimée à J28 : MBP134 : 67 % (1 décès / 3) ; Non renseigné : 82 % (2 décès / 11) ; Remdesivir : 84 % (9 décès / 63).</li><li>Les courbes de survie ne diffèrent pas significativement (log-rank p = 0,557) : l&#x27;écart observé peut être dû au hasard, compte tenu des effectifs.</li><li>Modèle de Cox : chaque baisse de 5 cycles du Ct GP multiplie le risque instantané de décès par 1,18 (IC 95 % 0,35–3,98, p = 0,791) - effet non démontré.</li><li>Concordance du modèle de Cox : C = 0,50 (ne distingue pas mieux que le hasard).</li><li>L&#x27;hypothèse des risques proportionnels n&#x27;est pas rejetée : le modèle de Cox est utilisable.</li></ul></div><div class="card conclusion"><h3>Conclusion</h3>
+    <ul><li>Dans ces données, ni le Ct GP ni l&#x27;âge ne permettent de prédire le décès de manière fiable.</li><li>Ces résultats reposent sur 29 patients et 8 décès : ils sont exploratoires et ne doivent pas servir à une décision clinique sans validation sur d&#x27;autres patients.</li><li>Il s&#x27;agit d&#x27;associations, pas de causes : par exemple, les patients à forte charge virale arrivent aussi parfois plus tard.</li><li>Les différences entre traitements ou entre sites ne mesurent pas l&#x27;efficacité des traitements : ceux-ci n&#x27;ont pas été attribués au hasard et les patients diffèrent d&#x27;un site à l&#x27;autre.</li></ul></div>
+  </div>
+</section>
+
+<script id="data-log" type="application/json">{"ok": true, "n": 29, "deces": 8, "ct_nom": "Ct GP", "modeles": [{"code": "M1", "nom": "Ct seul", "coefs": [{"variable": "Constante", "beta": -0.933, "OR": 0.39, "ic_bas": 0.13, "ic_haut": 0.89, "p": 0.0254}, {"variable": "Ct GP plus bas de 5 cycles", "beta": 0.108, "OR": 1.11, "ic_bas": 0.42, "ic_haut": 5.29, "p": 0.842}], "beta": [-0.9332026594003833, 0.10787755513553077], "vars": ["ct"], "epv": 8.0, "auc": 0.5, "auc_corr": 0.429, "brier": 0.199}, {"code": "M2", "nom": "\u00c2ge seul", "coefs": [{"variable": "Constante", "beta": -0.845, "OR": 0.43, "ic_bas": 0.18, "ic_haut": 0.95, "p": 0.0354}, {"variable": "\u00c2ge (+10 ans)", "beta": 0.083, "OR": 1.09, "ic_bas": 0.67, "ic_haut": 1.83, "p": 0.7377}], "beta": [-0.8450253036968537, 0.08261941977745732], "vars": ["age"], "epv": 8.0, "auc": 0.545, "auc_corr": 0.445, "brier": 0.199}, {"code": "M3", "nom": "Ct + \u00e2ge (exploratoire)", "coefs": [{"variable": "Constante", "beta": -0.854, "OR": 0.43, "ic_bas": 0.14, "ic_haut": 1.03, "p": 0.0575}, {"variable": "Ct GP plus bas de 5 cycles", "beta": 0.084, "OR": 1.09, "ic_bas": 0.4, "ic_haut": 5.12, "p": 0.8783}, {"variable": "\u00c2ge (+10 ans)", "beta": 0.062, "OR": 1.06, "ic_bas": 0.66, "ic_haut": 1.78, "p": 0.8025}], "beta": [-0.8543956248917328, 0.08396590504831758, 0.06153845270724414], "vars": ["ct", "age"], "epv": 4.0, "auc": 0.536, "auc_corr": 0.393, "brier": 0.199}], "roc": [{"code": "M1", "nom": "Ct seul", "fpr": [0.0, 0.048, 0.143, 0.19, 0.286, 0.286, 0.381, 0.429, 0.476, 0.619, 0.619, 0.762, 0.762, 0.905, 0.905, 1.0], "tpr": [0.0, 0.0, 0.0, 0.125, 0.125, 0.25, 0.25, 0.5, 0.625, 0.625, 0.75, 0.75, 0.875, 0.875, 1.0, 1.0]}, {"code": "M2", "nom": "\u00c2ge seul", "fpr": [0.0, 0.048, 0.048, 0.143, 0.238, 0.238, 0.333, 0.381, 0.381, 0.524, 0.524, 0.619, 0.81, 0.81, 1.0, 1.0], "tpr": [0.0, 0.0, 0.125, 0.125, 0.125, 0.25, 0.375, 0.5, 0.625, 0.625, 0.75, 0.75, 0.75, 0.875, 0.875, 1.0]}, {"code": "M3", "nom": "Ct + \u00e2ge (exploratoire)", "fpr": [0.0, 0.048, 0.143, 0.143, 0.333, 0.333, 0.476, 0.476, 0.524, 0.524, 0.714, 0.714, 0.857, 0.857, 1.0], "tpr": [0.0, 0.0, 0.0, 0.125, 0.125, 0.5, 0.5, 0.625, 0.625, 0.75, 0.75, 0.875, 0.875, 1.0, 1.0]}], "mle": {"OR": 1.38, "ic_bas": 0.34, "ic_haut": 5.67, "p": 0.6546}, "grille": [{"ct": 22, "p": 32.0}, {"ct": 25, "p": 30.0}, {"ct": 28, "p": 29.0}, {"ct": 30, "p": 28.0}, {"ct": 32, "p": 27.0}, {"ct": 35, "p": 26.0}, {"ct": 38, "p": 25.0}], "courbe": {"x": [18.0, 18.5, 19.0, 19.5, 20.0, 20.5, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5, 25.0, 25.5, 26.0, 26.5, 27.0, 27.5, 28.0, 28.5, 29.0, 29.5, 30.0, 30.5, 31.0, 31.5, 32.0, 32.5, 33.0, 33.5, 34.0, 34.5, 35.0, 35.5, 36.0, 36.5, 37.0, 37.5, 38.0, 38.5, 39.0, 39.5, 40.0, 40.5, 41.0, 41.5, 42.0], "y": [33.8, 33.5, 33.3, 33.0, 32.8, 32.6, 32.3, 32.1, 31.9, 31.6, 31.4, 31.2, 30.9, 30.7, 30.5, 30.2, 30.0, 29.8, 29.6, 29.3, 29.1, 28.9, 28.7, 28.4, 28.2, 28.0, 27.8, 27.6, 27.4, 27.1, 26.9, 26.7, 26.5, 26.3, 26.1, 25.9, 25.7, 25.5, 25.3, 25.1, 24.9, 24.7, 24.5, 24.3, 24.1, 23.9, 23.7, 23.5, 23.3]}, "points": [{"x": 25.4, "y": 0}, {"x": 26.3, "y": 1}, {"x": 28.8, "y": 0}, {"x": 26.9, "y": 0}, {"x": 26.1, "y": 0}, {"x": 30.8, "y": 0}, {"x": 25.6, "y": 0}, {"x": 26.2, "y": 0}, {"x": 25.3, "y": 0}, {"x": 29.1, "y": 0}, {"x": 26.5, "y": 1}, {"x": 26.4, "y": 0}, {"x": 26.5, "y": 0}, {"x": 25.8, "y": 0}, {"x": 28.0, "y": 0}, {"x": 27.0, "y": 0}, {"x": 27.5, "y": 0}, {"x": 32.3, "y": 1}, {"x": 28.7, "y": 1}, {"x": 25.8, "y": 1}, {"x": 26.4, "y": 0}, {"x": 41.2, "y": 0}, {"x": 26.7, "y": 0}, {"x": 26.7, "y": 1}, {"x": 26.5, "y": 1}, {"x": 26.8, "y": 0}, {"x": 36.6, "y": 0}, {"x": 27.2, "y": 1}, {"x": 27.9, "y": 0}], "depuis_cache": true}</script><script id="data-surv" type="application/json">{"ok": true, "n": 77, "deces": 12, "horizon": 28, "groupes": [{"nom": "MBP134", "n": 3, "deces": 1, "x": [0, 3.0, 3.0, 28], "y": [100.0, 100.0, 66.7, 66.7], "survie_finale": 66.7, "risque": [3, 2, 2, 2, 2, 2, 2, 2]}, {"nom": "Non renseign\u00e9", "n": 11, "deces": 2, "x": [0, 2.0, 2.0, 28], "y": [100.0, 100.0, 81.8, 81.8], "survie_finale": 81.8, "risque": [11, 8, 6, 5, 5, 4, 4, 4]}, {"nom": "Remdesivir", "n": 63, "deces": 9, "x": [0, 3.0, 3.0, 4.0, 4.0, 5.0, 5.0, 6.0, 6.0, 8.0, 8.0, 10.0, 10.0, 28], "y": [100.0, 100.0, 96.8, 96.8, 95.2, 95.2, 92.0, 92.0, 90.3, 90.3, 88.5, 88.5, 84.5, 84.5], "survie_finale": 84.5, "risque": [63, 61, 50, 41, 40, 40, 40, 40]}], "logrank": {"chi2": 1.17, "p": 0.5567, "ddl": 2}, "global_": {"x": [0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 5.0, 5.0, 6.0, 6.0, 8.0, 8.0, 10.0, 10.0, 28], "y": [100.0, 100.0, 97.4, 97.4, 93.5, 93.5, 92.2, 92.2, 89.5, 89.5, 88.1, 88.1, 86.6, 86.6, 83.2, 83.2], "survie_finale": 83.2, "risque": [77, 71, 58, 48, 47, 46, 46, 46]}, "cox": [{"modele": "Cox 1 : Ct", "n": 38, "deces": 8, "variable": "Ct GP plus bas de 5 cycles", "HR": 1.18, "ic_bas": 0.35, "ic_haut": 3.98, "p": 0.7911}, {"modele": "Cox 2 : \u00c2ge", "n": 74, "deces": 12, "variable": "\u00c2ge (+10 ans)", "HR": 1.45, "ic_bas": 0.92, "ic_haut": 2.27, "p": 0.1087}, {"modele": "Cox 3 : Ct + \u00e2ge (exploratoire)", "n": 38, "deces": 8, "variable": "Ct GP plus bas de 5 cycles", "HR": 1.12, "ic_bas": 0.32, "ic_haut": 3.94, "p": 0.8587}, {"modele": "Cox 3 : Ct + \u00e2ge (exploratoire)", "n": 38, "deces": 8, "variable": "\u00c2ge (+10 ans)", "HR": 1.19, "ic_bas": 0.75, "ic_haut": 1.89, "p": 0.4613}], "c_index": 0.502, "ph": {"rho": -0.168, "p": 0.691}, "jours_risque": [0, 4, 8, 12, 16, 20, 24, 28], "seuil": 27.0, "groupement": "traitement", "sans_date": 1}</script>
+
+</main>
+</div>
+</div>
+<script>
+(function(){ const m = document.getElementById("menu"), b = document.getElementById("bouton-menu");
+  b.addEventListener("click", e => { e.stopPropagation(); m.classList.toggle("ouvert"); });
+  document.addEventListener("click", e => { if (m.classList.contains("ouvert") && !m.contains(e.target)) m.classList.remove("ouvert"); }); })();
+</script>
+<script>
+const COUL = ["#2a78d6","#eb6834","#1baf7a","#eda100","#6250d6","#e87ba4","#008300","#e34948"];
+Chart.defaults.font.family = 'system-ui,"Segoe UI",sans-serif';
+Chart.defaults.color = "#52514e";
+Chart.defaults.borderColor = "#ebeae6";
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.maintainAspectRatio = false;
+const fr = (v, d=1) => v == null ? "-" : Number(v).toLocaleString("fr-FR", {maximumFractionDigits:d});
+function lire(id){ const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; }
+// barres horizontales d'une distribution {labels, valeurs, lignes:[{pct}]}
+function barresH(id, f, couleur=COUL[0], titre=""){
+  const el = document.getElementById(id); if(!el || !f) return;
+  const total = f.valeurs.reduce((a,b)=>a+b,0);
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{label:titre||"Effectif", data:f.valeurs,
+    backgroundColor:couleur, borderRadius:4, barThickness:18}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw} (${fr(100*c.raw/total)} %)`}}},
+      scales:{x:{beginAtZero:true, ticks:{precision:0}}, y:{grid:{display:false}}}}});
+}
+// barres horizontales en % (valeurs déjà en %), ex. symptômes
+function barresPct(id, f, couleur=COUL[0]){
+  const el = document.getElementById(id); if(!el || !f || !f.labels.length) return;
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{data:f.valeurs, backgroundColor:couleur, borderRadius:4, barThickness:14}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fr(c.raw)} % (${f.lignes[c.dataIndex].n}/${f.total})`}}},
+      scales:{x:{beginAtZero:true, max:100, title:{display:true,text:"% des participants"}}, y:{grid:{display:false}}}}});
+}
+// courbes : series = [{label, data, couleur}]
+function courbes(id, labels, series, titreY="", opts={}){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"line", data:{labels, datasets:series.map((s,i)=>({label:s.label, data:s.data, borderColor:s.couleur||COUL[i],
+      backgroundColor:s.couleur||COUL[i], borderWidth:2, pointRadius:3, spanGaps:true, yAxisID:"y"}))},
+    options:{interaction:{mode:"index", intersect:false}, scales:{y:{title:{display:true,text:titreY}, ...(opts.y||{})}, x:{grid:{display:false}, ...(opts.x||{})}}}});
+}
+function barresV(id, labels, valeurs, couleur=COUL[0], titre="Effectif"){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"bar", data:{labels, datasets:[{label:titre, data:valeurs, backgroundColor:couleur, borderRadius:3, maxBarThickness:28}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}, title:{display:true,text:titre}}, x:{grid:{display:false}}}}});
+}
+</script>
+
+<script>
+const log = lire("data-log"), surv = lire("data-surv");
+const g = document.getElementById("groupement"), b = document.getElementById("bloc-seuil"), sl = document.getElementById("seuil");
+if (g){ const majSeuil = () => b.style.display = g.value === "ct" ? "" : "none"; g.addEventListener("change", majSeuil); majSeuil();
+  sl.addEventListener("input", () => document.getElementById("seuil-val").textContent = fr(+sl.value)); }
+if (log && log.ok){
+  const pts = log.points;
+  new Chart(document.getElementById("g-logit"), {data:{datasets:[
+      {type:"line", label:"Probabilité prédite (M1)", data:log.courbe.x.map((x,i)=>({x, y:log.courbe.y[i]})), borderColor:COUL[0], borderWidth:2, pointRadius:0},
+      {type:"scatter", label:"Sortis guéris", data:pts.filter(p=>p.y===0).map(p=>({x:p.x, y:0, pid:p.pid})), backgroundColor:COUL[2], pointRadius:5, pointBorderColor:"#fff"},
+      {type:"scatter", label:"Décédés", data:pts.filter(p=>p.y===1).map(p=>({x:p.x, y:100, pid:p.pid})), backgroundColor:COUL[1], pointRadius:5, pointBorderColor:"#fff"}]},
+    options:{scales:{x:{type:"linear", title:{display:true,text:"Ct GP à l'inclusion (bas = charge virale forte)"}}, y:{min:-5, max:105, title:{display:true,text:"Probabilité de décès (%)"}}},
+      plugins:{tooltip:{callbacks:{label:t=>t.raw.pid ? ` ${t.raw.pid} : Ct ${fr(t.raw.x,2)}` : ` Ct ${fr(t.raw.x)} → ${fr(t.raw.y,0)} %`}}}}});
+  new Chart(document.getElementById("g-roc"), {type:"line", data:{datasets:[
+      ...log.roc.map((r,i)=>({label:`${r.code} ${r.nom} (AUC ${fr(log.modeles[i].auc,2)})`, data:r.fpr.map((x,j)=>({x, y:r.tpr[j]})), borderColor:COUL[i], borderWidth:2, pointRadius:0, stepped:"before"})),
+      {label:"Hasard", data:[{x:0,y:0},{x:1,y:1}], borderColor:"#b5b4ae", borderDash:[5,4], borderWidth:1, pointRadius:0}]},
+    options:{scales:{x:{type:"linear", min:0, max:1, title:{display:true,text:"1 − spécificité"}}, y:{min:0, max:1, title:{display:true,text:"Sensibilité"}}}}});
+}
+if (surv && surv.ok){
+  new Chart(document.getElementById("g-km"), {type:"line", data:{datasets:surv.groupes.map((gr,i)=>({
+      label:`${gr.nom} - ${gr.deces}/${gr.n} décès`, data:gr.x.map((x,j)=>({x, y:gr.y[j]})), borderColor:COUL[i], borderWidth:2, pointRadius:0}))},
+    options:{scales:{x:{type:"linear", min:0, max:surv.horizon, ticks:{stepSize:4}, title:{display:true,text:"Jours depuis la 1re perfusion"}},
+      y:{min:0, max:100, title:{display:true,text:"Survie (%)"}}}, plugins:{tooltip:{callbacks:{label:t=>` ${t.dataset.label.split(" -")[0]} : ${fr(t.raw.y)} % à J${t.raw.x}`}}}}});
+}
+</script>
+
+</body>
+</html>

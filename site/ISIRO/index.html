@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site Isiro · MEURI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#8a8984; --line:#e4e3de;
+  --accent:#2a78d6; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#6250d6;
+  --ok:#1baf7a; --warn-bg:#fff6e0; --warn:#c98500; --err-bg:#fdecec; --err:#c03a39; --ok-bg:#e6f6ef;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.5 system-ui,"Segoe UI",sans-serif}
+/* ---- mise en page : menu latéral gauche + contenu ---- */
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+aside.menu{background:#14213d;color:#dfe5ef;position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px 30px}
+aside.menu .logo{padding:4px 10px 14px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:10px}
+aside.menu .logo b{display:block;font-size:16px;color:#fff} aside.menu .logo span{font-size:12px;color:#9fb0c9}
+aside.menu .groupe{margin:14px 0 4px;padding:0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8ea3c2;font-weight:700}
+aside.menu .groupe small{display:block;text-transform:none;letter-spacing:0;font-weight:400;color:#7d90ad}
+aside.menu a{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 0;border-radius:6px;color:#dfe5ef;text-decoration:none;font-size:14px}
+aside.menu a:hover{background:rgba(255,255,255,.07)}
+aside.menu a.actif{background:#2a78d6;color:#fff;font-weight:600}
+aside.menu a.sous{padding-left:28px;font-size:13.5px;color:#c4cfdf}
+aside.menu a.sous.actif{color:#fff}
+aside.menu .pastille{margin-left:auto;font-size:11px;background:rgba(255,255,255,.12);border-radius:8px;padding:0 6px}
+.contenu{min-width:0}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.wrap{max-width:1240px;margin:0 auto;padding:0 22px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;flex-wrap:wrap}
+.brand h1{font-size:19px;margin:0} .brand small{color:var(--ink2)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+#bouton-menu{display:none}
+main{padding:22px 0 60px}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  aside.menu{position:fixed;left:0;top:0;width:260px;z-index:30;transform:translateX(-100%);transition:transform .2s}
+  aside.menu.ouvert{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  #bouton-menu{display:inline-block}
+  .wrap{padding:0 16px}
+}
+h2{font-size:20px;margin:30px 0 12px} h2:first-child{margin-top:0} h3{font-size:16px;margin:0 0 10px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.grid-3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.2} .kpi span{color:var(--ink2);font-size:13px}
+.kpi.alerte b{color:var(--err)} .kpi.bon b{color:var(--ok)}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td.txt,table.t th.txt{text-align:left;white-space:normal}
+table.t thead th{border-bottom:2px solid var(--ink2);color:var(--ink2);font-weight:600}
+table.t tr.tot td{font-weight:600;border-top:2px solid var(--line)}
+.scroll{overflow-x:auto}
+.chart{position:relative;height:260px} .chart.h320{height:320px} .chart.h200{height:200px}
+.note{background:var(--warn-bg);border-left:3px solid var(--s4);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.info{background:#eaf2fc;border-left:3px solid var(--accent);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.msg{padding:10px 14px;border-radius:6px;margin-bottom:14px} .msg.success{background:var(--ok-bg)} .msg.error{background:var(--err-bg)}
+.muted{color:var(--ink2)} .petit{font-size:12.5px}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:var(--line)}
+.badge.dc{background:var(--err-bg);color:var(--err)} .badge.ok{background:var(--ok-bg);color:#0d7a52}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer;text-decoration:none}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+form.filtres{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+form.filtres label{display:block;font-size:12px;color:var(--ink2)}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.vide{text-align:center;padding:60px 20px}
+.methodo ol.etapes{padding-left:18px;margin:6px 0} .methodo ol.etapes li{margin-bottom:8px}
+.methodo details{margin-top:8px} .methodo summary{cursor:pointer;color:var(--accent)}
+section.interpretation{margin-top:30px;padding:18px;border-radius:12px;background:#eef5fd;border:2px solid #b9d4f3}
+section.interpretation h2{margin-top:0;color:#1d5fae}
+section.interpretation .card ul{padding-left:18px;margin:0} section.interpretation .card li{margin-bottom:6px}
+section.interpretation .card.conclusion{border:2px solid #1d5fae;grid-column:1 / -1}
+.sommaire{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px} .sommaire a{font-size:13px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+</style>
+
+</head>
+<body>
+<div class="app">
+<aside class="menu" id="menu">
+  <div class="logo"><b>MEURI RDC - Ebola</b><span>Protocole EAP Remdesivir / MBP134 · REDCap</span></div>
+
+  <div class="groupe">Tableau de bord</div>
+  <a href="../../index.html" class="">🌍 Vue d'ensemble</a>
+  <div class="groupe" style="margin-top:6px">Sites</div>
+  <a class="sous " href="../BIAKATO/index.html">📍 Biakato</a><a class="sous " href="../BUTA/index.html">📍 Buta</a><a class="sous " href="../BUTEMBO/index.html">📍 Butembo</a><a class="sous actif" href="index.html">📍 Isiro</a><a class="sous " href="../KISANGANI/index.html">📍 Kisangani</a><a class="sous " href="../SUD-UBANGI/index.html">📍 Sud-Ubangi</a>
+  <div class="groupe" style="margin-top:6px">Analyses tous sites</div>
+  <a class="sous " href="../../confirmes/index.html">Cas confirmés</a>
+  <a class="sous " href="../../pep/index.html">PEP</a>
+  <a class="sous " href="../../securite/index.html">Sécurité (EI)</a>
+  <a class="sous " href="../../suivi/index.html">Suivi clinique & PCR</a>
+  
+
+  <div class="groupe">Modélisation du décès</div>
+  <a class="sous " href="../../modelisation/index.html">1 - Firth et survie</a>
+  <a class="sous " href="../../modelisation-temps/index.html">2 - Facteurs dans le temps</a>
+
+  <div class="groupe">Données</div>
+  <a href="../../donnees/index.html" class="">✔ Contrôle qualité</a>
+  <a class="sous " href="../../donnees/site-BIAKATO/index.html">Biakato</a><a class="sous " href="../../donnees/site-BUTA/index.html">Buta</a><a class="sous " href="../../donnees/site-BUTEMBO/index.html">Butembo</a><a class="sous " href="../../donnees/site-ISIRO/index.html">Isiro</a><a class="sous " href="../../donnees/site-KISANGANI/index.html">Kisangani</a><a class="sous " href="../../donnees/site-SUD-UBANGI/index.html">Sud-Ubangi</a>
+  
+
+  <div class="groupe">Version statique<small>Instantané des données au 14/11/2026 ; données agrégées, sans identifiant de participant.</small></div>
+  
+</aside>
+<div class="contenu">
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <div><button class="btn sec petit" id="bouton-menu" type="button" aria-label="Ouvrir le menu">☰ Menu</button>
+      <h1 style="display:inline">Site de Isiro - protocole EAP</h1><br>
+      <small>MEURI RDC - protocole EAP · données au <b>14/11/2026</b> · dernier import : MEURIRemdesivirMBP13_DATA_LABELS_2026-11-14_1428.csv (14/11/2026 17:50)</small></div>
+    
+  </div>
+</div></header>
+<main class="wrap">
+
+
+
+<div class="kpis">
+  <div class="kpi"><b>160</b><span>participants inclus</span></div>
+  <div class="kpi"><b>41</b><span>cas confirmés</span></div>
+  <div class="kpi"><b>119</b><span>contacts sous PEP</span></div>
+  <div class="kpi alerte"><b>8</b><span>décès (cas confirmés)</span></div>
+  <div class="kpi alerte"><b>25,8 %</b><span>létalité (31 issues connues)</span></div>
+  <div class="kpi"><b>229</b><span>perfusions administrées</span></div>
+  <div class="kpi"><b>3</b><span>participants avec ≥ 1 EI</span></div>
+</div>
+
+<h2>Le site comparé à l'ensemble des 6 sites</h2>
+<div class="card scroll"><table class="t">
+  <thead><tr><th class="txt">Indicateur</th><th>Isiro</th><th>Ensemble des sites</th></tr></thead>
+  <tbody><tr><td class="txt">Part des participants de l&#x27;ensemble (%)</td><td><b>36,6</b></td><td>100</td></tr><tr><td class="txt">Létalité des cas confirmés (%)</td><td><b>25,8</b></td><td>22,8</td></tr><tr><td class="txt">Âge médian des cas confirmés (ans)</td><td><b>30</b></td><td>28,5</td></tr><tr><td class="txt">Délai début symptômes → inclusion, médiane (j)</td><td><b>7</b></td><td>7</td></tr><tr><td class="txt">Délai exposition → 1re perfusion PEP, médiane (j)</td><td><b>-</b></td><td>5</td></tr><tr><td class="txt">PEP avec au moins une perfusion enregistrée (%)</td><td><b>0</b></td><td>63,4</td></tr><tr><td class="txt">Participants avec ≥ 1 événement indésirable (%)</td><td><b>1,9</b></td><td>11</td></tr></tbody>
+</table>
+<p class="petit muted">Les petits sites ont peu de patients : un écart avec l'ensemble peut être dû au hasard.</p></div>
+
+<div class="grid" style="margin-top:16px">
+  <div class="card"><h3>Inclusions par semaine</h3><div class="chart"><canvas id="g-incl"></canvas></div></div>
+  <div class="card"><h3>Issue des cas confirmés</h3><div class="chart h200"><canvas id="g-issue"></canvas></div>
+    <table class="t">
+  <thead><tr><th>Issue</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Sorti guéri</td><td>23</td><td>56,1</td></tr><tr><td>Décédé</td><td>8</td><td>19,5</td></tr><tr><td>En cours / non renseigné</td><td>10</td><td>24,4</td></tr>
+  <tr class="tot"><td>Total</td><td>41</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+
+<h2>Cas confirmés (41)</h2>
+<div class="grid-3">
+  <div class="card"><h3>Âge</h3><div class="scroll"><table class="t">
+  <thead><tr><th>Variable</th><th>n</th><th>Moyenne</th><th>Écart-type</th><th>Min</th><th>Q1</th><th>Médiane</th><th>Q3</th><th>Max</th></tr></thead>
+  <tbody>
+  <tr><td class="txt">Âge (ans)</td><td>41</td><td>31,5</td><td>15,3</td>
+    <td>0,2</td><td>23,8</td><td><b>30</b></td><td>44</td><td>61</td></tr>
+  </tbody>
+</table></div>
+<table class="t">
+  <thead><tr><th>Sexe</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Masculin</td><td>23</td><td>56,1</td></tr><tr><td>Féminin</td><td>18</td><td>43,9</td></tr>
+  <tr class="tot"><td>Total</td><td>41</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Traitement</h3><table class="t">
+  <thead><tr><th>Traitement</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Remdesivir</td><td>36</td><td>87,8</td></tr><tr><td>Non renseigné</td><td>5</td><td>12,2</td></tr>
+  <tr class="tot"><td>Total</td><td>41</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Délais (jours)</h3><div class="scroll"><table class="t">
+  <thead><tr><th>Délai</th><th>n</th><th>Moyenne</th><th>Écart-type</th><th>Min</th><th>Q1</th><th>Médiane</th><th>Q3</th><th>Max</th></tr></thead>
+  <tbody>
+  <tr><td class="txt">Début symptômes → inclusion</td><td>40</td><td>7,6</td><td>3,8</td>
+    <td>1</td><td>5</td><td><b>7</b></td><td>10</td><td>17</td></tr><tr><td class="txt">Inclusion → 1re perfusion</td><td>41</td><td>0,0</td><td>0,0</td>
+    <td>0</td><td>0</td><td><b>0</b></td><td>0</td><td>0</td></tr><tr><td class="txt">1re perfusion → sortie</td><td>23</td><td>7,1</td><td>3,1</td>
+    <td>1</td><td>5</td><td><b>7</b></td><td>9</td><td>13</td></tr><tr><td class="txt">1re perfusion → décès</td><td>8</td><td>4,0</td><td>2,9</td>
+    <td>1</td><td>1,8</td><td><b>3,5</b></td><td>5,5</td><td>9</td></tr><tr><td class="txt">1re perfusion → 1re PCR négative</td><td>25</td><td>4,6</td><td>3,3</td>
+    <td>0</td><td>3</td><td><b>5</b></td><td>6</td><td>11</td></tr>
+  </tbody>
+</table></div>
+</div>
+</div>
+<div class="grid" style="margin-top:16px">
+  <div class="card"><h3>Symptômes à l'inclusion</h3><div class="chart h320"><canvas id="g-sympt"></canvas></div></div>
+  <div class="card"><h3>Biologie à l'inclusion</h3><div class="scroll"><table class="t">
+  <thead><tr><th>Analyse</th><th>n</th><th>Moyenne</th><th>Écart-type</th><th>Min</th><th>Q1</th><th>Médiane</th><th>Q3</th><th>Max</th></tr></thead>
+  <tbody>
+  <tr><td class="txt">Ct GP (inclusion)</td><td>38</td><td>27,6</td><td>3,2</td>
+    <td>24,6</td><td>25,9</td><td><b>26,7</b></td><td>27,9</td><td>41,2</td></tr><tr><td class="txt">Ct NP (inclusion)</td><td>33</td><td>27,8</td><td>5,3</td>
+    <td>18,5</td><td>23,6</td><td><b>27,1</b></td><td>32,1</td><td>38,5</td></tr><tr><td class="txt">Créatinine (mg/dL)</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">Potassium</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">Sodium</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">ASAT (U/L)</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">ALAT (U/L)</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr>
+  </tbody>
+</table></div>
+</div>
+</div>
+<p><a href="../../confirmes/site-ISIRO/index.html">→ Analyse détaillée des cas confirmés de Isiro</a></p>
+
+
+
+<h2>Contacts sous PEP (119)</h2>
+<p class="note">0 contacts sur 119 ont au moins une perfusion enregistrée dans REDCap ; pour les autres, les formulaires de perfusion ne sont pas saisis.</p>
+<div class="grid-3">
+  <div class="card"><h3>Niveau de risque</h3><table class="t">
+  <thead><tr><th>Risque</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Non renseigné</td><td>119</td><td>100,0</td></tr>
+  <tr class="tot"><td>Total</td><td>119</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Délai exposition → 1re perfusion</h3><table class="t">
+  <thead><tr><th>Délai</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Non renseigné</td><td>119</td><td>100,0</td></tr>
+  <tr class="tot"><td>Total</td><td>119</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Perfusions reçues</h3><table class="t">
+  <thead><tr><th>Perfusions</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Aucune perfusion</td><td>119</td><td>100,0</td></tr>
+  <tr class="tot"><td>Total</td><td>119</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+<p><a href="../../pep/site-ISIRO/index.html">→ Analyse détaillée des PEP de Isiro</a></p>
+
+
+
+<h2>Sécurité</h2>
+<div class="grid-3">
+  <div class="card"><h3>Événements indésirables</h3><p><b>3</b> EI chez <b>3</b> participants (1,9 %), dont <b>1</b> grave.</p>
+    <p>5 perfusions interrompues sur 229.</p></div>
+  <div class="card"><h3>Sévérité</h3><table class="t">
+  <thead><tr><th>Sévérité</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Légère</td><td>2</td><td>66,7</td></tr><tr><td>Grave</td><td>1</td><td>33,3</td></tr>
+  <tr class="tot"><td>Total</td><td>3</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Lien avec le traitement</h3><table class="t">
+  <thead><tr><th>Relation</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Sans rapport avec le médicament de l&#x27;étude</td><td>3</td><td>100,0</td></tr>
+  <tr class="tot"><td>Total</td><td>3</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+<script id="data-d" type="application/json">{"nom": "ISIRO", "v": {"n": 160, "n_conf": 41, "n_pep": 119, "n_sites": 1, "deces": 8, "sortis": 23, "letalite": 25.8, "n_connus": 31, "part_ei": 3, "nb_eig": 1, "perfusions": 229, "sites": [{"site": "ISIRO", "confirmes": 41, "pep": 119, "deces": 8, "sortis": 23, "letalite": 25.8, "ei": 3, "perfusions": 229}], "inclusions": {"labels": ["07/09", "14/09", "21/09", "28/09", "05/10", "12/10", "19/10", "26/10", "02/11", "09/11"], "confirmes": [10, 2, 3, 4, 1, 4, 3, 4, 6, 4], "pep": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, "trt_conf": {"lignes": [{"modalite": "Remdesivir", "n": 36, "pct": 87.8}, {"modalite": "Non renseign\u00e9", "n": 5, "pct": 12.2}], "total": 41, "labels": ["Remdesivir", "Non renseign\u00e9"], "valeurs": [36, 5]}, "trt_pep": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 112, "pct": 94.1}, {"modalite": "Remdesivir", "n": 7, "pct": 5.9}], "total": 119, "labels": ["Non renseign\u00e9", "Remdesivir"], "valeurs": [112, 7]}, "issue_conf": {"lignes": [{"modalite": "Sorti gu\u00e9ri", "n": 23, "pct": 56.1}, {"modalite": "D\u00e9c\u00e9d\u00e9", "n": 8, "pct": 19.5}, {"modalite": "En cours / non renseign\u00e9", "n": 10, "pct": 24.4}], "total": 41, "labels": ["Sorti gu\u00e9ri", "D\u00e9c\u00e9d\u00e9", "En cours / non renseign\u00e9"], "valeurs": [23, 8, 10]}, "deduits": 19}, "c": {"n": 41, "age": {"nom": "\u00c2ge (ans)", "n": 41, "moyenne": 31.5, "ecart_type": 15.3, "min": 0.2, "q1": 23.8, "mediane": 30.0, "q3": 44.0, "max": 61.0}, "age_liste": [{"nom": "\u00c2ge (ans)", "n": 41, "moyenne": 31.5, "ecart_type": 15.3, "min": 0.2, "q1": 23.8, "mediane": 30.0, "q3": 44.0, "max": 61.0}], "sexe": {"lignes": [{"modalite": "Masculin", "n": 23, "pct": 56.1}, {"modalite": "F\u00e9minin", "n": 18, "pct": 43.9}], "total": 41, "labels": ["Masculin", "F\u00e9minin"], "valeurs": [23, 18]}, "classe_age": {"lignes": [{"modalite": "0-14", "n": 5, "pct": 12.2}, {"modalite": "15-24", "n": 7, "pct": 17.1}, {"modalite": "25-34", "n": 13, "pct": 31.7}, {"modalite": "35-44", "n": 6, "pct": 14.6}, {"modalite": "45-54", "n": 8, "pct": 19.5}, {"modalite": "55+", "n": 2, "pct": 4.9}], "total": 41, "labels": ["0-14", "15-24", "25-34", "35-44", "45-54", "55+"], "valeurs": [5, 7, 13, 6, 8, 2]}, "site": {"lignes": [{"modalite": "ISIRO", "n": 41, "pct": 100.0}], "total": 41, "labels": ["ISIRO"], "valeurs": [41]}, "traitement": {"lignes": [{"modalite": "Remdesivir", "n": 36, "pct": 87.8}, {"modalite": "Non renseign\u00e9", "n": 5, "pct": 12.2}], "total": 41, "labels": ["Remdesivir", "Non renseign\u00e9"], "valeurs": [36, 5]}, "issue": {"lignes": [{"modalite": "Sorti gu\u00e9ri", "n": 23, "pct": 56.1}, {"modalite": "D\u00e9c\u00e9d\u00e9", "n": 8, "pct": 19.5}, {"modalite": "En cours / non renseign\u00e9", "n": 10, "pct": 24.4}], "total": 41, "labels": ["Sorti gu\u00e9ri", "D\u00e9c\u00e9d\u00e9", "En cours / non renseign\u00e9"], "valeurs": [23, 8, 10]}, "deces": 8, "sortis": 23, "n_connus": 31, "letalite": 25.8, "vaccin": {"lignes": [{"modalite": "Non", "n": 41, "pct": 100.0}], "total": 41, "labels": ["Non"], "valeurs": [41]}, "paludisme": {"lignes": [{"modalite": "Not done", "n": 40, "pct": 97.6}, {"modalite": "Negative", "n": 1, "pct": 2.4}], "total": 41, "labels": ["Not done", "Negative"], "valeurs": [40, 1]}, "symptomes": {"lignes": [{"modalite": "C\u00e9phal\u00e9es", "n": 36, "pct": 87.8}, {"modalite": "Diarrh\u00e9e", "n": 33, "pct": 80.5}, {"modalite": "Vomissements", "n": 29, "pct": 70.7}, {"modalite": "Douleurs abdominales", "n": 25, "pct": 61.0}, {"modalite": "Fi\u00e8vre", "n": 24, "pct": 58.5}, {"modalite": "H\u00e9morragies", "n": 7, "pct": 17.1}, {"modalite": "Toux", "n": 6, "pct": 14.6}, {"modalite": "Essoufflement/Difficult\u00e9s respiratoires", "n": 5, "pct": 12.2}, {"modalite": "Injection conjonctivale", "n": 3, "pct": 7.3}, {"modalite": "\u00c9ruptions cutan\u00e9es", "n": 2, "pct": 4.9}, {"modalite": "Trouble de la conscience", "n": 1, "pct": 2.4}], "labels": ["C\u00e9phal\u00e9es", "Diarrh\u00e9e", "Vomissements", "Douleurs abdominales", "Fi\u00e8vre", "H\u00e9morragies", "Toux", "Essoufflement/Difficult\u00e9s respiratoires", "Injection conjonctivale", "\u00c9ruptions cutan\u00e9es", "Trouble de la conscience"], "valeurs": [87.8, 80.5, 70.7, 61.0, 58.5, 17.1, 14.6, 12.2, 7.3, 4.9, 2.4], "total": 41}, "comorbidites": {"lignes": [{"modalite": "Hypertension art\u00e9rielle", "n": 5, "pct": 12.2}, {"modalite": "VIH", "n": 2, "pct": 4.9}, {"modalite": "Diab\u00e8te sucr\u00e9", "n": 1, "pct": 2.4}], "labels": ["Hypertension art\u00e9rielle", "VIH", "Diab\u00e8te sucr\u00e9"], "valeurs": [12.2, 4.9, 2.4], "total": 41}, "avec_comorbidite": 8, "vitaux": [{"nom": "Temp\u00e9rature (\u00b0C)", "n": 41, "moyenne": 37.0, "ecart_type": 0.8, "min": 36.0, "q1": 36.4, "mediane": 37.0, "q3": 37.2, "max": 39.1}, {"nom": "Fr\u00e9quence cardiaque", "n": 41, "moyenne": 92.8, "ecart_type": 18.7, "min": 56.0, "q1": 83.0, "mediane": 90.0, "q3": 103.0, "max": 142.0}, {"nom": "Fr\u00e9quence respiratoire", "n": 41, "moyenne": 25.3, "ecart_type": 6.3, "min": 17.0, "q1": 22.0, "mediane": 24.0, "q3": 28.0, "max": 48.0}, {"nom": "SpO2 (%)", "n": 41, "moyenne": 96.4, "ecart_type": 2.2, "min": 90.0, "q1": 95.0, "mediane": 97.0, "q3": 98.0, "max": 100.0}, {"nom": "PA systolique", "n": 37, "moyenne": 116.6, "ecart_type": 14.5, "min": 96.0, "q1": 107.0, "mediane": 111.0, "q3": 128.0, "max": 156.0}, {"nom": "PA diastolique", "n": 37, "moyenne": 76.6, "ecart_type": 9.8, "min": 57.0, "q1": 69.0, "mediane": 79.0, "q3": 83.0, "max": 98.0}, {"nom": "Poids (kg)", "n": 38, "moyenne": 59.9, "ecart_type": 21.4, "min": 7.0, "q1": 50.0, "mediane": 61.0, "q3": 75.0, "max": 98.0}], "bio": [{"nom": "Ct GP (inclusion)", "n": 38, "moyenne": 27.6, "ecart_type": 3.2, "min": 24.6, "q1": 25.9, "mediane": 26.7, "q3": 27.9, "max": 41.2}, {"nom": "Ct NP (inclusion)", "n": 33, "moyenne": 27.8, "ecart_type": 5.3, "min": 18.5, "q1": 23.6, "mediane": 27.1, "q3": 32.1, "max": 38.5}, {"nom": "Cr\u00e9atinine (mg/dL)", "n": 0}, {"nom": "Potassium", "n": 0}, {"nom": "Sodium", "n": 0}, {"nom": "ASAT (U/L)", "n": 0}, {"nom": "ALAT (U/L)", "n": 0}], "delais": [{"nom": "D\u00e9but sympt\u00f4mes \u2192 inclusion", "n": 40, "moyenne": 7.6, "ecart_type": 3.8, "min": 1.0, "q1": 5.0, "mediane": 7.0, "q3": 10.0, "max": 17.0}, {"nom": "Inclusion \u2192 1re perfusion", "n": 41, "moyenne": 0.0, "ecart_type": 0.0, "min": 0.0, "q1": 0.0, "mediane": 0.0, "q3": 0.0, "max": 0.0}, {"nom": "1re perfusion \u2192 sortie", "n": 23, "moyenne": 7.1, "ecart_type": 3.1, "min": 1.0, "q1": 5.0, "mediane": 7.0, "q3": 9.0, "max": 13.0}, {"nom": "1re perfusion \u2192 d\u00e9c\u00e8s", "n": 8, "moyenne": 4.0, "ecart_type": 2.9, "min": 1.0, "q1": 1.8, "mediane": 3.5, "q3": 5.5, "max": 9.0}, {"nom": "1re perfusion \u2192 1re PCR n\u00e9gative", "n": 25, "moyenne": 4.6, "ecart_type": 3.3, "min": 0.0, "q1": 3.0, "mediane": 5.0, "q3": 6.0, "max": 11.0}], "perfusions": [{"nom": "Nombre de perfusions", "n": 41, "moyenne": 5.6, "ecart_type": 3.3, "min": 1.0, "q1": 2.0, "mediane": 6.0, "q3": 9.0, "max": 10.0}, {"nom": "Dose totale (mg)", "n": 41, "moyenne": 603.5, "ecart_type": 337.3, "min": 80.0, "q1": 300.0, "mediane": 700.0, "q3": 900.0, "max": 1100.0}], "let_site": [{"modalite": "ISIRO", "n": 31, "deces": 8, "letalite": 25.8}], "let_trt": [{"modalite": "Non renseign\u00e9", "n": 2, "deces": 2, "letalite": 100.0}, {"modalite": "Remdesivir", "n": 29, "deces": 6, "letalite": 20.7}], "let_sexe": [{"modalite": "F\u00e9minin", "n": 11, "deces": 2, "letalite": 18.2}, {"modalite": "Masculin", "n": 20, "deces": 6, "letalite": 30.0}], "let_age": [{"modalite": "0-14", "n": 4, "deces": 1, "letalite": 25.0}, {"modalite": "15-24", "n": 5, "deces": 1, "letalite": 20.0}, {"modalite": "25-34", "n": 7, "deces": 1, "letalite": 14.3}, {"modalite": "35-44", "n": 5, "deces": 2, "letalite": 40.0}, {"modalite": "45-54", "n": 8, "deces": 2, "letalite": 25.0}, {"modalite": "55+", "n": 2, "deces": 1, "letalite": 50.0}], "issue_med": [{"issue": "Sorti gu\u00e9ri", "n": 23, "age": 32.0, "ct_gp": 26.8, "ct_np": 29.9, "nb_sympt": 4.0, "temperature": 36.7}, {"issue": "D\u00e9c\u00e9d\u00e9", "n": 8, "age": 43.0, "ct_gp": 26.6, "ct_np": 24.4, "nb_sympt": 4.5, "temperature": 37.2}], "courbe": {"labels": ["07/09", "14/09", "21/09", "28/09", "05/10", "12/10", "19/10", "26/10", "02/11", "09/11"], "valeurs": [10, 2, 3, 4, 1, 4, 3, 4, 6, 4]}}, "p": {"n": 119, "age": {"nom": "\u00c2ge (ans)", "n": 0}, "sexe": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 119, "pct": 100.0}], "total": 119, "labels": ["Non renseign\u00e9"], "valeurs": [119]}, "site": {"lignes": [{"modalite": "ISIRO", "n": 119, "pct": 100.0}], "total": 119, "labels": ["ISIRO"], "valeurs": [119]}, "risque": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 119, "pct": 100.0}], "total": 119, "labels": ["Non renseign\u00e9"], "valeurs": [119]}, "mode": {"lignes": [], "total": 0, "labels": [], "valeurs": []}, "expo": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 119, "pct": 100.0}], "total": 119, "labels": ["Non renseign\u00e9"], "valeurs": [119]}, "administree": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 119, "pct": 100.0}], "total": 119, "labels": ["Non renseign\u00e9"], "valeurs": [119]}, "traitement": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 112, "pct": 94.1}, {"modalite": "Remdesivir", "n": 7, "pct": 5.9}], "total": 119, "labels": ["Non renseign\u00e9", "Remdesivir"], "valeurs": [112, 7]}, "vaccin": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 119, "pct": 100.0}], "total": 119, "labels": ["Non renseign\u00e9"], "valeurs": [119]}, "schema": {"lignes": [{"modalite": "Aucune perfusion", "n": 119, "pct": 100.0}], "total": 119, "labels": ["Aucune perfusion"], "valeurs": [119]}, "delai": {"nom": "Exposition \u2192 1re perfusion", "n": 0}, "delai_liste": [{"nom": "Exposition \u2192 1re perfusion", "n": 0}], "delai_classes": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 119, "pct": 100.0}], "total": 119, "labels": ["Non renseign\u00e9"], "valeurs": [119]}, "pct_2j": null, "perfusions": [{"nom": "Nombre de perfusions", "n": 119, "moyenne": 0.0, "ecart_type": 0.0, "min": 0.0, "q1": 0.0, "mediane": 0.0, "q3": 0.0, "max": 0.0}, {"nom": "Dose totale (mg)", "n": 0}], "vivant": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 119, "pct": 100.0}], "total": 119, "labels": ["Non renseign\u00e9"], "valeurs": [119]}, "termine": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 119, "pct": 100.0}], "total": 119, "labels": ["Non renseign\u00e9"], "valeurs": [119]}, "traites": 0, "deces": 0, "par_site": [{"site": "ISIRO", "n": 119, "traites": 0, "ei": 0, "haut": 0, "delai": null, "vivants": 0}], "courbe": {"labels": [], "valeurs": []}}, "s": {"n": 160, "n_ei": 3, "part_ei": 3, "pct_ei": 1.9, "nb_eig": 1, "groupes": [{"type": "Confirm\u00e9", "traitement": "Non renseign\u00e9", "n": 5, "avec_ei": 0, "pct": 0.0, "eig": 0, "interrompues": 0, "reactions": 0}, {"type": "Confirm\u00e9", "traitement": "Remdesivir", "n": 36, "avec_ei": 3, "pct": 8.3, "eig": 1, "interrompues": 5, "reactions": 1}, {"type": "PEP", "traitement": "Non renseign\u00e9", "n": 112, "avec_ei": 0, "pct": 0.0, "eig": 0, "interrompues": 0, "reactions": 0}, {"type": "PEP", "traitement": "Remdesivir", "n": 7, "avec_ei": 0, "pct": 0.0, "eig": 0, "interrompues": 0, "reactions": 0}], "severite": {"lignes": [{"modalite": "L\u00e9g\u00e8re", "n": 2, "pct": 66.7}, {"modalite": "Grave", "n": 1, "pct": 33.3}], "total": 3, "labels": ["L\u00e9g\u00e8re", "Grave"], "valeurs": [2, 1]}, "relation": {"lignes": [{"modalite": "Sans rapport avec le m\u00e9dicament de l'\u00e9tude", "n": 3, "pct": 100.0}], "total": 3, "labels": ["Sans rapport avec le m\u00e9dicament de l'\u00e9tude"], "valeurs": [3]}, "gravite": {"lignes": [{"modalite": "Sans gravit\u00e9", "n": 2, "pct": 66.7}, {"modalite": "N\u00e9cessite ou prolonge l'hospitalisation", "n": 1, "pct": 33.3}], "total": 3, "labels": ["Sans gravit\u00e9", "N\u00e9cessite ou prolonge l'hospitalisation"], "valeurs": [2, 1]}, "issue": {"lignes": [{"modalite": "R\u00e9solu", "n": 2, "pct": 66.7}, {"modalite": "Aggravation de l'\u00e9tat de sant\u00e9", "n": 1, "pct": 33.3}], "total": 3, "labels": ["R\u00e9solu", "Aggravation de l'\u00e9tat de sant\u00e9"], "valeurs": [2, 1]}, "actions": {"lignes": [{"modalite": "M\u00e9dication concomitante administr\u00e9e", "n": 2, "pct": 66.7}, {"modalite": "Interruption de l'\u00e9tude", "n": 1, "pct": 33.3}], "labels": ["M\u00e9dication concomitante administr\u00e9e", "Interruption de l'\u00e9tude"], "valeurs": [66.7, 33.3], "total": 3}, "termes": [{"terme": "H\u00c9MATOME SOUS CUTAN\u00c9", "n": 1}, {"terme": "FI\u00c8VRE", "n": 1}], "perfusions": 229, "perf_interrompues": 5, "reactions": 1, "medicaments": [{"medicament": "VITAMINE C", "n": 37}, {"medicament": "PARACETAMOL", "n": 37}, {"medicament": "ALU", "n": 22}, {"medicament": "CEFTRIAXONE", "n": 20}, {"medicament": "RINGER LACTATE", "n": 13}, {"medicament": "CEFIXIME", "n": 9}, {"medicament": "ARTESUNATE", "n": 9}, {"medicament": "METRONIDAZOL", "n": 8}, {"medicament": "OMEPRAZOL", "n": 8}, {"medicament": "AMOXYCILLINE", "n": 6}, {"medicament": "VITAMINE B6", "n": 5}, {"medicament": "LACTATE RINGER", "n": 5}]}, "comparaison": [{"indicateur": "Part des participants de l'ensemble (%)", "site": 36.6, "ensemble": 100.0, "unite": "%"}, {"indicateur": "L\u00e9talit\u00e9 des cas confirm\u00e9s (%)", "site": 25.8, "ensemble": 22.8, "unite": "%"}, {"indicateur": "\u00c2ge m\u00e9dian des cas confirm\u00e9s (ans)", "site": 30.0, "ensemble": 28.5, "unite": ""}, {"indicateur": "D\u00e9lai d\u00e9but sympt\u00f4mes \u2192 inclusion, m\u00e9diane (j)", "site": 7.0, "ensemble": 7.0, "unite": ""}, {"indicateur": "D\u00e9lai exposition \u2192 1re perfusion PEP, m\u00e9diane (j)", "site": null, "ensemble": 5.0, "unite": ""}, {"indicateur": "PEP avec au moins une perfusion enregistr\u00e9e (%)", "site": 0.0, "ensemble": 63.4, "unite": "%"}, {"indicateur": "Participants avec \u2265 1 \u00e9v\u00e9nement ind\u00e9sirable (%)", "site": 1.9, "ensemble": 11.0, "unite": "%"}]}</script>
+
+
+</main>
+</div>
+</div>
+<script>
+(function(){ const m = document.getElementById("menu"), b = document.getElementById("bouton-menu");
+  b.addEventListener("click", e => { e.stopPropagation(); m.classList.toggle("ouvert"); });
+  document.addEventListener("click", e => { if (m.classList.contains("ouvert") && !m.contains(e.target)) m.classList.remove("ouvert"); }); })();
+</script>
+<script>
+const COUL = ["#2a78d6","#eb6834","#1baf7a","#eda100","#6250d6","#e87ba4","#008300","#e34948"];
+Chart.defaults.font.family = 'system-ui,"Segoe UI",sans-serif';
+Chart.defaults.color = "#52514e";
+Chart.defaults.borderColor = "#ebeae6";
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.maintainAspectRatio = false;
+const fr = (v, d=1) => v == null ? "-" : Number(v).toLocaleString("fr-FR", {maximumFractionDigits:d});
+function lire(id){ const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; }
+// barres horizontales d'une distribution {labels, valeurs, lignes:[{pct}]}
+function barresH(id, f, couleur=COUL[0], titre=""){
+  const el = document.getElementById(id); if(!el || !f) return;
+  const total = f.valeurs.reduce((a,b)=>a+b,0);
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{label:titre||"Effectif", data:f.valeurs,
+    backgroundColor:couleur, borderRadius:4, barThickness:18}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw} (${fr(100*c.raw/total)} %)`}}},
+      scales:{x:{beginAtZero:true, ticks:{precision:0}}, y:{grid:{display:false}}}}});
+}
+// barres horizontales en % (valeurs déjà en %), ex. symptômes
+function barresPct(id, f, couleur=COUL[0]){
+  const el = document.getElementById(id); if(!el || !f || !f.labels.length) return;
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{data:f.valeurs, backgroundColor:couleur, borderRadius:4, barThickness:14}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fr(c.raw)} % (${f.lignes[c.dataIndex].n}/${f.total})`}}},
+      scales:{x:{beginAtZero:true, max:100, title:{display:true,text:"% des participants"}}, y:{grid:{display:false}}}}});
+}
+// courbes : series = [{label, data, couleur}]
+function courbes(id, labels, series, titreY="", opts={}){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"line", data:{labels, datasets:series.map((s,i)=>({label:s.label, data:s.data, borderColor:s.couleur||COUL[i],
+      backgroundColor:s.couleur||COUL[i], borderWidth:2, pointRadius:3, spanGaps:true, yAxisID:"y"}))},
+    options:{interaction:{mode:"index", intersect:false}, scales:{y:{title:{display:true,text:titreY}, ...(opts.y||{})}, x:{grid:{display:false}, ...(opts.x||{})}}}});
+}
+function barresV(id, labels, valeurs, couleur=COUL[0], titre="Effectif"){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"bar", data:{labels, datasets:[{label:titre, data:valeurs, backgroundColor:couleur, borderRadius:3, maxBarThickness:28}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}, title:{display:true,text:titre}}, x:{grid:{display:false}}}}});
+}
+</script>
+
+<script>
+const d = lire("data-d");
+if (d){
+  const v = d.v;
+  new Chart(document.getElementById("g-incl"), {type:"bar", data:{labels:v.inclusions.labels, datasets:[
+      {label:"Cas confirmés", data:v.inclusions.confirmes, backgroundColor:COUL[1], borderRadius:3},
+      {label:"PEP", data:v.inclusions.pep, backgroundColor:COUL[2], borderRadius:3}]},
+    options:{scales:{x:{stacked:true, grid:{display:false}}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}}}});
+  barresH("g-issue", v.issue_conf, COUL[0]);
+  if (d.c) barresPct("g-sympt", d.c.symptomes, COUL[1]);
+}
+</script>
+
+</body>
+</html>

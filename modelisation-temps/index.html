@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modélisation 2 - décès dans le temps · MEURI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#8a8984; --line:#e4e3de;
+  --accent:#2a78d6; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#6250d6;
+  --ok:#1baf7a; --warn-bg:#fff6e0; --warn:#c98500; --err-bg:#fdecec; --err:#c03a39; --ok-bg:#e6f6ef;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.5 system-ui,"Segoe UI",sans-serif}
+/* ---- mise en page : menu latéral gauche + contenu ---- */
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+aside.menu{background:#14213d;color:#dfe5ef;position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px 30px}
+aside.menu .logo{padding:4px 10px 14px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:10px}
+aside.menu .logo b{display:block;font-size:16px;color:#fff} aside.menu .logo span{font-size:12px;color:#9fb0c9}
+aside.menu .groupe{margin:14px 0 4px;padding:0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8ea3c2;font-weight:700}
+aside.menu .groupe small{display:block;text-transform:none;letter-spacing:0;font-weight:400;color:#7d90ad}
+aside.menu a{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 0;border-radius:6px;color:#dfe5ef;text-decoration:none;font-size:14px}
+aside.menu a:hover{background:rgba(255,255,255,.07)}
+aside.menu a.actif{background:#2a78d6;color:#fff;font-weight:600}
+aside.menu a.sous{padding-left:28px;font-size:13.5px;color:#c4cfdf}
+aside.menu a.sous.actif{color:#fff}
+aside.menu .pastille{margin-left:auto;font-size:11px;background:rgba(255,255,255,.12);border-radius:8px;padding:0 6px}
+.contenu{min-width:0}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.wrap{max-width:1240px;margin:0 auto;padding:0 22px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;flex-wrap:wrap}
+.brand h1{font-size:19px;margin:0} .brand small{color:var(--ink2)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+#bouton-menu{display:none}
+main{padding:22px 0 60px}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  aside.menu{position:fixed;left:0;top:0;width:260px;z-index:30;transform:translateX(-100%);transition:transform .2s}
+  aside.menu.ouvert{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  #bouton-menu{display:inline-block}
+  .wrap{padding:0 16px}
+}
+h2{font-size:20px;margin:30px 0 12px} h2:first-child{margin-top:0} h3{font-size:16px;margin:0 0 10px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.grid-3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.2} .kpi span{color:var(--ink2);font-size:13px}
+.kpi.alerte b{color:var(--err)} .kpi.bon b{color:var(--ok)}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td.txt,table.t th.txt{text-align:left;white-space:normal}
+table.t thead th{border-bottom:2px solid var(--ink2);color:var(--ink2);font-weight:600}
+table.t tr.tot td{font-weight:600;border-top:2px solid var(--line)}
+.scroll{overflow-x:auto}
+.chart{position:relative;height:260px} .chart.h320{height:320px} .chart.h200{height:200px}
+.note{background:var(--warn-bg);border-left:3px solid var(--s4);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.info{background:#eaf2fc;border-left:3px solid var(--accent);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.msg{padding:10px 14px;border-radius:6px;margin-bottom:14px} .msg.success{background:var(--ok-bg)} .msg.error{background:var(--err-bg)}
+.muted{color:var(--ink2)} .petit{font-size:12.5px}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:var(--line)}
+.badge.dc{background:var(--err-bg);color:var(--err)} .badge.ok{background:var(--ok-bg);color:#0d7a52}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer;text-decoration:none}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+form.filtres{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+form.filtres label{display:block;font-size:12px;color:var(--ink2)}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.vide{text-align:center;padding:60px 20px}
+.methodo ol.etapes{padding-left:18px;margin:6px 0} .methodo ol.etapes li{margin-bottom:8px}
+.methodo details{margin-top:8px} .methodo summary{cursor:pointer;color:var(--accent)}
+section.interpretation{margin-top:30px;padding:18px;border-radius:12px;background:#eef5fd;border:2px solid #b9d4f3}
+section.interpretation h2{margin-top:0;color:#1d5fae}
+section.interpretation .card ul{padding-left:18px;margin:0} section.interpretation .card li{margin-bottom:6px}
+section.interpretation .card.conclusion{border:2px solid #1d5fae;grid-column:1 / -1}
+.sommaire{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px} .sommaire a{font-size:13px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+</style>
+
+<style>
+.ref{background:#f3f6fa;border-left:4px solid #14213d;padding:10px 14px;border-radius:4px;font-size:13.5px}
+td.cell{text-align:center !important} td.cell.sig{background:#fde3e3;font-weight:700} td.cell.final{outline:2px solid #c03a39;outline-offset:-3px}
+td.cell.prot{background:#dff3ea;font-weight:700}
+.panel h3 .badge{margin-left:6px}
+</style>
+
+</head>
+<body>
+<div class="app">
+<aside class="menu" id="menu">
+  <div class="logo"><b>MEURI RDC - Ebola</b><span>Protocole EAP Remdesivir / MBP134 · REDCap</span></div>
+
+  <div class="groupe">Tableau de bord</div>
+  <a href="../index.html" class="">🌍 Vue d'ensemble</a>
+  <div class="groupe" style="margin-top:6px">Sites</div>
+  <a class="sous " href="../site/BIAKATO/index.html">📍 Biakato</a><a class="sous " href="../site/BUTA/index.html">📍 Buta</a><a class="sous " href="../site/BUTEMBO/index.html">📍 Butembo</a><a class="sous " href="../site/ISIRO/index.html">📍 Isiro</a><a class="sous " href="../site/KISANGANI/index.html">📍 Kisangani</a><a class="sous " href="../site/SUD-UBANGI/index.html">📍 Sud-Ubangi</a>
+  <div class="groupe" style="margin-top:6px">Analyses tous sites</div>
+  <a class="sous " href="../confirmes/index.html">Cas confirmés</a>
+  <a class="sous " href="../pep/index.html">PEP</a>
+  <a class="sous " href="../securite/index.html">Sécurité (EI)</a>
+  <a class="sous " href="../suivi/index.html">Suivi clinique & PCR</a>
+  
+
+  <div class="groupe">Modélisation du décès</div>
+  <a class="sous " href="../modelisation/index.html">1 - Firth et survie</a>
+  <a class="sous actif" href="index.html">2 - Facteurs dans le temps</a>
+
+  <div class="groupe">Données</div>
+  <a href="../donnees/index.html" class="">✔ Contrôle qualité</a>
+  <a class="sous " href="../donnees/site-BIAKATO/index.html">Biakato</a><a class="sous " href="../donnees/site-BUTA/index.html">Buta</a><a class="sous " href="../donnees/site-BUTEMBO/index.html">Butembo</a><a class="sous " href="../donnees/site-ISIRO/index.html">Isiro</a><a class="sous " href="../donnees/site-KISANGANI/index.html">Kisangani</a><a class="sous " href="../donnees/site-SUD-UBANGI/index.html">Sud-Ubangi</a>
+  
+
+  <div class="groupe">Version statique<small>Instantané des données au 14/11/2026 ; données agrégées, sans identifiant de participant.</small></div>
+  
+</aside>
+<div class="contenu">
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <div><button class="btn sec petit" id="bouton-menu" type="button" aria-label="Ouvrir le menu">☰ Menu</button>
+      <h1 style="display:inline">Modélisation 2 - facteurs de risque du décès dans le temps</h1><br>
+      <small>MEURI RDC - protocole EAP · données au <b>14/11/2026</b> · dernier import : MEURIRemdesivirMBP13_DATA_LABELS_2026-11-14_1428.csv (14/11/2026 17:50)</small></div>
+    
+  </div>
+</div></header>
+<main class="wrap">
+
+
+<nav class="sommaire"><a class="btn sec" href="#methodologie">1. Méthodologie</a><a class="btn sec" href="#variables">2. Variables</a>
+  <a class="btn sec" href="#resultats">3. Résultats</a><a class="btn sec" href="#interpretation">4. Interprétation</a><a class="btn sec" href="#limites">5. Limites</a></nav>
+
+
+<section class="card methodo" id="methodologie">
+  <h2 style="margin-top:0">Méthodologie</h2>
+  <div class="ref"><b>Article de référence :</b> Ontshick LL, et al. « Dynamic modeling of mortality risk factors in Ebola virus disease using logistic regression on unbalanced panel data from a randomized controlled trial in the Democratic Republic of Congo ». <i>PLOS Global Public Health</i>, 2025.
+    doi : <a href="https://journals.plos.org/globalpublichealth/article?id=10.1371/journal.pgph.0004901" target="_blank" rel="noopener">10.1371/journal.pgph.0004901</a></div>
+  <div class="grid" style="margin-top:12px">
+    <div><h3>La question</h3><p>Le modèle 1 cherche ce qui, <b>à l'arrivée</b>, prédit le décès. Ici, on se demande si les facteurs de risque
+      <b>changent au cours de l'hospitalisation</b> : ce qui est alarmant à l'inclusion l'est-il encore au 3e jour ? De nouveaux signaux
+      apparaissent-ils ? C'est l'idée de « modélisation dynamique » de l'article.</p></div>
+    <div><h3>L'idée de l'article</h3><p>Dans l'essai PALM (617 patients, RDC), les patients sont revus à J0, J7, J14, J21 et J28. Chaque visite est un
+      <b>« panel »</b> : la photo des patients présents ce jour-là. Comme certains patients décèdent ou ne sont pas revus, les panels ont des
+      tailles différentes (<b>données de panel non cylindrées</b>). Une <b>régression logistique distincte est ajustée à chaque visite</b>,
+      avec sélection descendante pas à pas (méthode de Wald, on retire la variable la moins significative jusqu'à ce que toutes aient p &lt; 0,05),
+      puis on vérifie la discrimination (AUC) et la calibration (test de Hosmer-Lemeshow) à chaque visite.</p></div>
+  </div>
+  <h3>La démarche appliquée ici, étape par étape</h3>
+  <ol class="etapes">
+    <li><b>Définir les temps.</b> Jour 0 = jour de la 1re perfusion. Temps étudiés : J0 (inclusion), J1, J3, J5, J7. Les décès de l'EAP surviennent
+      entre J1 et J9 : des visites hebdomadaires comme dans PALM n'auraient laissé presque aucun décès à analyser.</li>
+    <li><b>Constituer chaque panel.</b> À chaque temps t, on garde les cas confirmés <b>encore vivants</b> à t, <b>observés</b> ce jour-là (signes vitaux
+      relevés à t ± 1 jour) et dont l'issue finale est connue (décès ou sortie guérie).</li>
+    <li><b>Définir l'issue.</b> Y<sub>t</sub> = 1 si le patient <b>décède après t</b>, 0 s'il sort guéri. On prédit donc l'avenir à partir de ce qu'on voit au temps t.</li>
+    <li><b>Mesurer les variables au temps t.</b> À J0 : âge, sexe, charge virale (Ct), signes vitaux, symptômes, biologie, comorbidité. Aux temps suivants :
+      signes vitaux du jour, dernière PCR (résultat et Ct des 3 derniers jours), événement indésirable déjà déclaré, âge.</li>
+    <li><b>Analyse univariée.</b> Chaque variable est testée seule (régression logistique de Firth) : c'est la liste des <b>facteurs de risque à chaque temps</b>.</li>
+    <li><b>Modèle multivarié par sélection descendante (Wald, p &lt; 0,05)</b>, comme dans l'article, à partir des variables présélectionnées
+      (p univarié &lt; 0,20 et renseignées pour au moins 70 % des patients), en gardant au plus 1 variable pour 5 décès.</li>
+    <li><b>Évaluer chaque modèle</b> : AUC (discrimination) et test de Hosmer-Lemeshow (calibration : p &gt; 0,05 = probabilités prédites conformes aux décès observés).
+      Un temps avec moins de 3 décès est déclaré « non estimable ».</li>
+  </ol>
+  <h3>Ce qui diffère de l'article, et pourquoi</h3>
+  <div class="scroll"><table class="t"><thead><tr><th class="txt">Élément</th><th class="txt">Article (PALM)</th><th class="txt">Ce tableau de bord (EAP)</th></tr></thead><tbody>
+    <tr><td class="txt">Patients</td><td class="txt">617 patients d'un essai randomisé, 3 localités (Beni, Butembo-Mangina, Katwa)</td><td class="txt">57 cas confirmés à issue connue (13 décès), 6 sites, accès étendu</td></tr>
+    <tr><td class="txt">Temps</td><td class="txt">J0, J7, J14, J21, J28</td><td class="txt">J0, J1, J3, J5, J7 (décès précoces)</td></tr>
+    <tr><td class="txt">Issue à chaque temps</td><td class="txt">décès (définition par visite non détaillée)</td><td class="txt">décès <b>après</b> le temps t, chez les patients vivants et observés à t</td></tr>
+    <tr><td class="txt">Régression</td><td class="txt">logistique classique (SPSS)</td><td class="txt">logistique de <b>Firth</b> : indispensable avec si peu de décès (évite des OR infinis)</td></tr>
+    <tr><td class="txt">Sélection</td><td class="txt">descendante pas à pas (Wald), toutes variables au départ</td><td class="txt">descendante pas à pas (Wald), après présélection univariée p &lt; 0,20</td></tr>
+    <tr><td class="txt">Performance</td><td class="txt">AUC + Hosmer-Lemeshow à chaque visite</td><td class="txt">identique</td></tr>
+  </tbody></table></div>
+  <details><summary><b>Rappel des résultats de l'article</b></summary>
+    <ul><li><b>J0 :</b> charge virale (Ct), créatinine, ALAT, hémorragie, essoufflement, conjonctivite (AUC 0,88).</li>
+      <li><b>J7 :</b> sodium, ASAT, coma, douleurs abdominales, essoufflement (AUC 0,85).</li>
+      <li><b>J14 :</b> ASAT et coma (AUC 0,97).</li>
+      <li><b>J21 et J28 :</b> aucun facteur significatif ; modèles jugés non valides (mauvaise calibration).</li>
+      <li>Conclusion des auteurs : charge virale et fonctions rénale/hépatique dominent à l'admission ; état mental et troubles électrolytiques ensuite.</li></ul></details>
+</section>
+
+<h2 id="variables">Variables du modèle</h2>
+<div class="grid">
+  <div class="card scroll"><h3>À l'inclusion (J0)</h3><table class="t"><thead><tr><th class="txt">Variable</th><th class="txt">L'OR correspond à</th></tr></thead>
+    <tbody><tr><td class="txt">Âge</td><td class="txt">+10 ans</td></tr><tr><td class="txt">Sexe masculin</td><td class="txt">oui vs non</td></tr><tr><td class="txt">Charge virale (Ct GP)</td><td class="txt">Ct plus bas de 5 cycles</td></tr><tr><td class="txt">Charge virale (Ct NP)</td><td class="txt">Ct plus bas de 5 cycles</td></tr><tr><td class="txt">Température</td><td class="txt">+1 °C</td></tr><tr><td class="txt">Fréquence cardiaque</td><td class="txt">+10 bpm</td></tr><tr><td class="txt">Fréquence respiratoire</td><td class="txt">+5 /min</td></tr><tr><td class="txt">Saturation en O2</td><td class="txt">−5 %</td></tr><tr><td class="txt">PA systolique</td><td class="txt">+10 mmHg</td></tr><tr><td class="txt">Créatinine</td><td class="txt">+1 mg/dL</td></tr><tr><td class="txt">ASAT</td><td class="txt">+100 U/L</td></tr><tr><td class="txt">ALAT</td><td class="txt">+100 U/L</td></tr><tr><td class="txt">Sodium</td><td class="txt">+5 mmol/L</td></tr><tr><td class="txt">Potassium</td><td class="txt">+1 mmol/L</td></tr><tr><td class="txt">Nombre de symptômes</td><td class="txt">+1 symptôme</td></tr><tr><td class="txt">Délai symptômes → inclusion</td><td class="txt">+1 jour</td></tr><tr><td class="txt">Comorbidité</td><td class="txt">oui vs non</td></tr><tr><td class="txt">Hémorragie</td><td class="txt">présent vs absent</td></tr><tr><td class="txt">Essoufflement</td><td class="txt">présent vs absent</td></tr><tr><td class="txt">Trouble de la conscience</td><td class="txt">présent vs absent</td></tr><tr><td class="txt">Diarrhée</td><td class="txt">présent vs absent</td></tr><tr><td class="txt">Vomissements</td><td class="txt">présent vs absent</td></tr><tr><td class="txt">Douleurs abdominales</td><td class="txt">présent vs absent</td></tr><tr><td class="txt">Injection conjonctivale</td><td class="txt">présent vs absent</td></tr><tr><td class="txt">Hoquet</td><td class="txt">présent vs absent</td></tr><tr><td class="txt">Fièvre</td><td class="txt">présent vs absent</td></tr></tbody></table></div>
+  <div class="card scroll"><h3>Aux temps de suivi (J1 à J7)</h3><table class="t"><thead><tr><th class="txt">Variable</th><th class="txt">L'OR correspond à</th></tr></thead>
+    <tbody><tr><td class="txt">Âge</td><td class="txt">+10 ans</td></tr><tr><td class="txt">Température du jour</td><td class="txt">+1 °C</td></tr><tr><td class="txt">Fréquence cardiaque du jour</td><td class="txt">+10 bpm</td></tr><tr><td class="txt">Fréquence respiratoire du jour</td><td class="txt">+5 /min</td></tr><tr><td class="txt">Saturation en O2 du jour</td><td class="txt">−5 %</td></tr><tr><td class="txt">PA systolique du jour</td><td class="txt">+10 mmHg</td></tr><tr><td class="txt">Charge virale (Ct GP)</td><td class="txt">Ct plus bas de 5 cycles</td></tr><tr><td class="txt">Dernière PCR positive</td><td class="txt">oui vs non</td></tr><tr><td class="txt">Événement indésirable déjà déclaré</td><td class="txt">oui vs non</td></tr></tbody></table>
+    <p class="petit muted">Valeur « du jour » = médiane des relevés du jour t (à défaut, t ± 1). Les biologies ne sont mesurées qu'à l'inclusion dans l'EAP.
+    Variable à expliquer : décès après le temps t (1) ou sortie guérie (0).</p></div>
+</div>
+
+<h2 id="resultats" style="font-size:23px">Résultats</h2>
+<div class="grid">
+  <div class="card"><h3>Patients observés et décès ultérieurs par temps (panels non cylindrés)</h3><div class="chart"><canvas id="g-panels"></canvas></div></div>
+  <div class="card scroll"><h3>Dynamique des facteurs de risque (OR univariés)</h3>
+    <table class="t"><thead><tr><th class="txt">Variable</th><th>J0</th><th>J1</th><th>J3</th><th>J5</th><th>J7</th></tr></thead>
+    <tbody><tr><td class="txt">Fréquence respiratoire</td>
+      <td class="cell sig final" title="p = 0,0002">3,20</td>
+      <td class="cell sig " title="p = 0,0001">4,48</td>
+      <td class="cell sig final" title="p = 0,0001">7,37</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Saturation en O2</td>
+      <td class="cell sig " title="p = 0,0005">15,38</td>
+      <td class="cell sig final" title="p = 0,0003">22,02</td>
+      <td class="cell sig " title="p = 0,0001">1231,49</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Fréquence cardiaque</td>
+      <td class="cell  " title="p = 0,0532">1,39</td>
+      <td class="cell  " title="p = 0,0716">1,53</td>
+      <td class="cell sig " title="p = 0,0008">3,08</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Température</td>
+      <td class="cell sig final" title="p = 0,0027">3,53</td>
+      <td class="cell sig final" title="p = 0,0026">3,38</td>
+      <td class="cell sig " title="p = 0,0035">3,98</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Charge virale (Ct NP)</td>
+      <td class="cell sig " title="p = 0,0037">6,16</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Nombre de symptômes</td>
+      <td class="cell sig " title="p = 0,0152">1,63</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Injection conjonctivale</td>
+      <td class="cell sig " title="p = 0,0208">9,67</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Hémorragie</td>
+      <td class="cell  " title="p = 0,0593">4,26</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Diarrhée</td>
+      <td class="cell  " title="p = 0,0984">3,21</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Essoufflement</td>
+      <td class="cell  " title="p = 0,1046">3,95</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Trouble de la conscience</td>
+      <td class="cell  " title="p = 0,1182">10,68</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Dernière PCR positive</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="p = 0,151">6,33</td>
+      <td class="cell  " title="p = 0,945">1,07</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Événement indésirable déjà déclaré</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="p = 0,2483">0,37</td>
+      <td class="cell  " title="p = 0,1524">0,17</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr><tr><td class="txt">Délai symptômes → inclusion</td>
+      <td class="cell  " title="p = 0,1898">1,08</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td>
+      <td class="cell  " title="">·</td></tr></tbody></table>
+    <p class="petit muted">Rouge : facteur de risque significatif (p &lt; 0,05) ; vert : facteur protecteur significatif ; encadré : retenu dans le modèle final du temps ;
+    « · » : non mesuré ou non estimable. Variables affichées : p &lt; 0,20 à au moins un temps.</p></div>
+</div>
+
+
+<div class="card panel" style="margin-top:16px">
+  <h3>J0 - inclusion <span class="badge">57 patients</span><span class="badge dc">13 décès ultérieurs</span>
+    <span class="badge ok">AUC 0,89</span></h3>
+  
+  <div class="grid">
+    <div class="scroll"><b>Analyse univariée (facteurs de risque au temps J0)</b>
+      <table class="t"><thead><tr><th class="txt">Variable</th><th class="txt">OR pour</th><th>n</th><th>OR</th><th>IC 95 %</th><th>p</th></tr></thead>
+      <tbody><tr style="font-weight:600"><td class="txt">Fréquence respiratoire</td><td class="txt petit">+5 /min</td><td>56</td>
+        <td>3,20</td><td>1,58 – 8,92</td><td>&lt; 0,001</td></tr><tr style="font-weight:600"><td class="txt">Saturation en O2</td><td class="txt petit">−5 %</td><td>53</td>
+        <td>15,38</td><td>3,00 – 125,99</td><td>&lt; 0,001</td></tr><tr style="font-weight:600"><td class="txt">Température</td><td class="txt petit">+1 °C</td><td>57</td>
+        <td>3,53</td><td>1,52 – 10,05</td><td>0,003</td></tr><tr style="font-weight:600"><td class="txt">Charge virale (Ct NP)</td><td class="txt petit">Ct plus bas de 5 cycles</td><td>24</td>
+        <td>6,16</td><td>1,61 – 61,73</td><td>0,004</td></tr><tr style="font-weight:600"><td class="txt">Nombre de symptômes</td><td class="txt petit">+1 symptôme</td><td>57</td>
+        <td>1,63</td><td>1,09 – 2,65</td><td>0,015</td></tr><tr style="font-weight:600"><td class="txt">Injection conjonctivale</td><td class="txt petit">présent vs absent</td><td>57</td>
+        <td>9,67</td><td>1,42 – 107,92</td><td>0,021</td></tr><tr ><td class="txt">Fréquence cardiaque</td><td class="txt petit">+10 bpm</td><td>56</td>
+        <td>1,39</td><td>1,00 – 2,04</td><td>0,053</td></tr><tr ><td class="txt">Hémorragie</td><td class="txt petit">présent vs absent</td><td>57</td>
+        <td>4,26</td><td>0,94 – 19,69</td><td>0,059</td></tr><tr ><td class="txt">Diarrhée</td><td class="txt petit">présent vs absent</td><td>57</td>
+        <td>3,21</td><td>0,82 – 18,02</td><td>0,098</td></tr><tr ><td class="txt">Essoufflement</td><td class="txt petit">présent vs absent</td><td>57</td>
+        <td>3,95</td><td>0,74 – 21,40</td><td>0,105</td></tr><tr ><td class="txt">Trouble de la conscience</td><td class="txt petit">présent vs absent</td><td>57</td>
+        <td>10,68</td><td>0,54 – 1598,88</td><td>0,118</td></tr><tr ><td class="txt">Délai symptômes → inclusion</td><td class="txt petit">+1 jour</td><td>54</td>
+        <td>1,08</td><td>0,96 – 1,23</td><td>0,190</td></tr><tr ><td class="txt">Vomissements</td><td class="txt petit">présent vs absent</td><td>57</td>
+        <td>2,11</td><td>0,62 – 8,15</td><td>0,237</td></tr><tr ><td class="txt">Âge</td><td class="txt petit">+10 ans</td><td>57</td>
+        <td>1,17</td><td>0,76 – 1,86</td><td>0,484</td></tr><tr ><td class="txt">Comorbidité</td><td class="txt petit">oui vs non</td><td>50</td>
+        <td>1,42</td><td>0,35 – 5,34</td><td>0,611</td></tr><tr ><td class="txt">PA systolique</td><td class="txt petit">+10 mmHg</td><td>53</td>
+        <td>1,10</td><td>0,69 – 1,71</td><td>0,676</td></tr><tr ><td class="txt">Sexe masculin</td><td class="txt petit">oui vs non</td><td>57</td>
+        <td>1,18</td><td>0,35 – 4,23</td><td>0,788</td></tr><tr ><td class="txt">Charge virale (Ct GP)</td><td class="txt petit">Ct plus bas de 5 cycles</td><td>29</td>
+        <td>1,11</td><td>0,42 – 5,29</td><td>0,842</td></tr><tr ><td class="txt">Douleurs abdominales</td><td class="txt petit">présent vs absent</td><td>57</td>
+        <td>1,06</td><td>0,32 – 3,61</td><td>0,930</td></tr><tr ><td class="txt">Fièvre</td><td class="txt petit">présent vs absent</td><td>57</td>
+        <td>1,06</td><td>0,32 – 3,61</td><td>0,930</td></tr><tr ><td class="txt">Hoquet</td><td class="txt petit">présent vs absent</td><td>57</td>
+        <td>1,07</td><td>0,01 – 21,39</td><td>0,966</td></tr></tbody></table></div>
+    <div><b>Modèle multivarié final (sélection descendante, Wald)</b>
+      <table class="t"><thead><tr><th class="txt">Variable</th><th>OR</th><th>IC 95 %</th><th>p</th></tr></thead>
+      <tbody><tr><td class="txt">Fréquence respiratoire <span class="petit muted">(+5 /min)</span></td><td><b>2,70</b></td>
+        <td>1,49 – 7,25</td><td>&lt; 0,001</td></tr><tr><td class="txt">Température <span class="petit muted">(+1 °C)</span></td><td><b>3,81</b></td>
+        <td>1,44 – 12,59</td><td>0,007</td></tr></tbody></table>
+      <p class="petit">56 patients, 13 décès · AUC = <b>0,89</b> ·
+        Hosmer-Lemeshow : χ² = 1,80 (8 ddl), p = 0,986
+        <span class="badge ok">bonne calibration</span></p>
+      
+      <p class="petit muted"><b>Étapes de la sélection :</b> retrait de « Nombre de symptômes » (p de Wald = 0,547) ; retrait de « Saturation en O2 » (p de Wald = 0,182).</p>
+      <p class="petit muted">Au plus 2 variables dans le modèle final (1 pour 5 décès).</p></div>
+  </div>
+</div>
+
+<div class="card panel" style="margin-top:16px">
+  <h3>J1 <span class="badge">55 patients</span><span class="badge dc">11 décès ultérieurs</span>
+    <span class="badge ok">AUC 0,93</span></h3>
+  
+  <div class="grid">
+    <div class="scroll"><b>Analyse univariée (facteurs de risque au temps J1)</b>
+      <table class="t"><thead><tr><th class="txt">Variable</th><th class="txt">OR pour</th><th>n</th><th>OR</th><th>IC 95 %</th><th>p</th></tr></thead>
+      <tbody><tr style="font-weight:600"><td class="txt">Fréquence respiratoire du jour</td><td class="txt petit">+5 /min</td><td>55</td>
+        <td>4,48</td><td>1,74 – 18,38</td><td>&lt; 0,001</td></tr><tr style="font-weight:600"><td class="txt">Saturation en O2 du jour</td><td class="txt petit">−5 %</td><td>55</td>
+        <td>22,02</td><td>3,58 – 224,55</td><td>&lt; 0,001</td></tr><tr style="font-weight:600"><td class="txt">Température du jour</td><td class="txt petit">+1 °C</td><td>55</td>
+        <td>3,38</td><td>1,51 – 8,71</td><td>0,003</td></tr><tr ><td class="txt">Fréquence cardiaque du jour</td><td class="txt petit">+10 bpm</td><td>55</td>
+        <td>1,53</td><td>0,96 – 2,58</td><td>0,072</td></tr><tr ><td class="txt">Dernière PCR positive</td><td class="txt petit">oui vs non</td><td>26</td>
+        <td>6,33</td><td>0,57 – 877,21</td><td>0,151</td></tr><tr ><td class="txt">Événement indésirable déjà déclaré</td><td class="txt petit">oui vs non</td><td>55</td>
+        <td>0,37</td><td>0,04 – 1,86</td><td>0,248</td></tr><tr ><td class="txt">PA systolique du jour</td><td class="txt petit">+10 mmHg</td><td>51</td>
+        <td>1,16</td><td>0,65 – 2,13</td><td>0,617</td></tr><tr ><td class="txt">Âge</td><td class="txt petit">+10 ans</td><td>55</td>
+        <td>1,03</td><td>0,64 – 1,66</td><td>0,914</td></tr></tbody></table></div>
+    <div><b>Modèle multivarié final (sélection descendante, Wald)</b>
+      <table class="t"><thead><tr><th class="txt">Variable</th><th>OR</th><th>IC 95 %</th><th>p</th></tr></thead>
+      <tbody><tr><td class="txt">Saturation en O2 du jour <span class="petit muted">(−5 %)</span></td><td><b>36,54</b></td>
+        <td>4,44 – 847,14</td><td>&lt; 0,001</td></tr><tr><td class="txt">Température du jour <span class="petit muted">(+1 °C)</span></td><td><b>5,64</b></td>
+        <td>1,83 – 30,05</td><td>0,002</td></tr></tbody></table>
+      <p class="petit">55 patients, 11 décès · AUC = <b>0,93</b> ·
+        Hosmer-Lemeshow : χ² = 5,52 (8 ddl), p = 0,700
+        <span class="badge ok">bonne calibration</span></p>
+      
+      <p class="petit muted"><b>Étapes de la sélection :</b> retrait de « Fréquence cardiaque du jour » (p de Wald = 0,261) ; retrait de « Fréquence respiratoire du jour » (p de Wald = 0,267).</p>
+      <p class="petit muted">Au plus 2 variables dans le modèle final (1 pour 5 décès).</p></div>
+  </div>
+</div>
+
+<div class="card panel" style="margin-top:16px">
+  <h3>J3 <span class="badge">46 patients</span><span class="badge dc">5 décès ultérieurs</span>
+    <span class="badge ok">AUC 0,98</span></h3>
+  
+  <div class="grid">
+    <div class="scroll"><b>Analyse univariée (facteurs de risque au temps J3)</b>
+      <table class="t"><thead><tr><th class="txt">Variable</th><th class="txt">OR pour</th><th>n</th><th>OR</th><th>IC 95 %</th><th>p</th></tr></thead>
+      <tbody><tr style="font-weight:600"><td class="txt">Fréquence respiratoire du jour</td><td class="txt petit">+5 /min</td><td>46</td>
+        <td>7,37</td><td>2,05 – 83,34</td><td>&lt; 0,001</td></tr><tr style="font-weight:600"><td class="txt">Saturation en O2 du jour</td><td class="txt petit">−5 %</td><td>46</td>
+        <td>1231,49</td><td>5,69 – 15664623,09</td><td>&lt; 0,001</td></tr><tr style="font-weight:600"><td class="txt">Fréquence cardiaque du jour</td><td class="txt petit">+10 bpm</td><td>46</td>
+        <td>3,08</td><td>1,51 – 9,45</td><td>&lt; 0,001</td></tr><tr style="font-weight:600"><td class="txt">Température du jour</td><td class="txt petit">+1 °C</td><td>46</td>
+        <td>3,98</td><td>1,56 – 14,19</td><td>0,004</td></tr><tr ><td class="txt">Événement indésirable déjà déclaré</td><td class="txt petit">oui vs non</td><td>46</td>
+        <td>0,17</td><td>0,00 – 1,70</td><td>0,152</td></tr><tr ><td class="txt">Charge virale (Ct GP)</td><td class="txt petit">Ct plus bas de 5 cycles</td><td>21</td>
+        <td>0,02</td><td>0,00 – 9,22</td><td>0,225</td></tr><tr ><td class="txt">Âge</td><td class="txt petit">+10 ans</td><td>46</td>
+        <td>0,81</td><td>0,40 – 1,57</td><td>0,529</td></tr><tr ><td class="txt">PA systolique du jour</td><td class="txt petit">+10 mmHg</td><td>43</td>
+        <td>1,08</td><td>0,44 – 2,36</td><td>0,857</td></tr><tr ><td class="txt">Dernière PCR positive</td><td class="txt petit">oui vs non</td><td>33</td>
+        <td>1,07</td><td>0,15 – 7,80</td><td>0,945</td></tr></tbody></table></div>
+    <div><b>Modèle multivarié final (sélection descendante, Wald)</b>
+      <table class="t"><thead><tr><th class="txt">Variable</th><th>OR</th><th>IC 95 %</th><th>p</th></tr></thead>
+      <tbody><tr><td class="txt">Fréquence respiratoire du jour <span class="petit muted">(+5 /min)</span></td><td><b>7,37</b></td>
+        <td>2,05 – 83,34</td><td>&lt; 0,001</td></tr></tbody></table>
+      <p class="petit">46 patients, 5 décès · AUC = <b>0,98</b> ·
+        Hosmer-Lemeshow : χ² = 1,41 (7 ddl), p = 0,985
+        <span class="badge ok">bonne calibration</span></p>
+      
+      <p class="petit muted"><b>Étapes de la sélection :</b> retrait de « Saturation en O2 du jour » (p de Wald = 0,110).</p>
+      <p class="petit muted">Au plus 1 variable dans le modèle final (1 pour 5 décès).</p></div>
+  </div>
+</div>
+
+<div class="card panel" style="margin-top:16px">
+  <h3>J5 <span class="badge">39 patients</span><span class="badge dc">2 décès ultérieurs</span>
+    </h3>
+  <p class="note">Non estimable : seulement 2 décès après J5 parmi 39 patients observés (au moins 3 décès nécessaires).</p>
+</div>
+
+<div class="card panel" style="margin-top:16px">
+  <h3>J7 <span class="badge">33 patients</span><span class="badge dc">1 décès ultérieurs</span>
+    </h3>
+  <p class="note">Non estimable : seulement 1 décès après J7 parmi 33 patients observés (au moins 3 décès nécessaires).</p>
+</div>
+
+
+<section class="interpretation" id="interpretation">
+  <h2>Interprétation des résultats</h2>
+  <p class="petit muted">Espace réservé à la lecture des résultats, généré automatiquement à partir des chiffres et mis à jour à chaque import.</p>
+  <div class="grid">
+    <div class="card"><h3>J0</h3><ul><li>Facteurs associés au décès ultérieur (analyse univariée) : Fréquence respiratoire (OR 3,20 pour +5 /min, p &lt; 0,001) ; Saturation en O2 (OR 15,38 pour −5 %, p &lt; 0,001) ; Température (OR 3,53 pour +1 °C, p = 0,003) ; Charge virale (Ct NP) (OR 6,16 pour Ct plus bas de 5 cycles, p = 0,004) ; Nombre de symptômes (OR 1,63 pour +1 symptôme, p = 0,015) ; Injection conjonctivale (OR 9,67 pour présent vs absent, p = 0,021).</li><li>Modèle final après sélection descendante : Fréquence respiratoire - OR 2,70 (IC 95 % 1,49–7,25), p &lt; 0,001 ; Température - OR 3,81 (IC 95 % 1,44–12,59), p = 0,007.</li><li>Discrimination bonne (AUC = 0,89) ; calibration correcte (Hosmer-Lemeshow p = 0,986). AUC apparente, non validée sur d&#x27;autres patients.</li><li>13 décès après J0 parmi 57 patients observés : effectif suffisant pour 1 à 2 variables.</li></ul></div><div class="card"><h3>J1</h3><ul><li>Facteurs associés au décès ultérieur (analyse univariée) : Fréquence respiratoire du jour (OR 4,48 pour +5 /min, p &lt; 0,001) ; Saturation en O2 du jour (OR 22,02 pour −5 %, p &lt; 0,001) ; Température du jour (OR 3,38 pour +1 °C, p = 0,003).</li><li>Modèle final après sélection descendante : Saturation en O2 du jour - OR 36,54 (IC 95 % 4,44–847,14), p &lt; 0,001 ; Température du jour - OR 5,64 (IC 95 % 1,83–30,05), p = 0,002.</li><li>Discrimination bonne (AUC = 0,93) ; calibration correcte (Hosmer-Lemeshow p = 0,700). AUC apparente, non validée sur d&#x27;autres patients.</li><li>Attention : l&#x27;intervalle de confiance est très large pour Saturation en O2 du jour - l&#x27;association est probable mais sa force est très imprécise (peu de décès).</li><li>11 décès après J1 parmi 55 patients observés : effectif suffisant pour 1 à 2 variables.</li></ul></div><div class="card"><h3>J3</h3><ul><li>Facteurs associés au décès ultérieur (analyse univariée) : Fréquence respiratoire du jour (OR 7,37 pour +5 /min, p &lt; 0,001) ; Saturation en O2 du jour (OR 1231,49 pour −5 %, p &lt; 0,001) ; Fréquence cardiaque du jour (OR 3,08 pour +10 bpm, p &lt; 0,001) ; Température du jour (OR 3,98 pour +1 °C, p = 0,004).</li><li>Modèle final après sélection descendante : Fréquence respiratoire du jour - OR 7,37 (IC 95 % 2,05–83,34), p &lt; 0,001.</li><li>Discrimination bonne (AUC = 0,98) ; calibration correcte (Hosmer-Lemeshow p = 0,985). AUC apparente, non validée sur d&#x27;autres patients.</li><li>5 décès après J3 parmi 46 patients observés : très peu de décès, résultats à considérer comme indicatifs.</li></ul></div><div class="card"><h3>J5</h3><ul><li>Non estimable : seulement 2 décès après J5 parmi 39 patients observés (au moins 3 décès nécessaires).</li></ul></div><div class="card"><h3>J7</h3><ul><li>Non estimable : seulement 1 décès après J7 parmi 33 patients observés (au moins 3 décès nécessaires).</li></ul></div>
+    <div class="card conclusion"><h3>Dynamique et conclusion</h3><ul><li>Dynamique des facteurs de risque : J0 : Fréquence respiratoire, Température → J1 : Saturation en O2 du jour, Température du jour → J3 : Fréquence respiratoire du jour.</li><li>Aux temps J5, J7, il reste trop peu de décès pour estimer un modèle : la quasi-totalité des décès survient dans les premiers jours, comme dans l&#x27;article de référence où aucun facteur n&#x27;était identifié aux visites tardives (J21, J28).</li><li>Dans l&#x27;article de Ontshick et al. (PALM, 617 patients), la charge virale et les fonctions rénale et hépatique dominaient à l&#x27;admission, tandis que l&#x27;état neurologique (coma) et les troubles électrolytiques prenaient le relais aux temps suivants. Les biologies n&#x27;étant disponibles qu&#x27;à l&#x27;inclusion et pour une minorité de patients dans l&#x27;EAP, seuls les signes vitaux, la PCR et l&#x27;âge peuvent être suivis dans le temps ici.</li><li>Ces associations ne sont pas causales et reposent sur peu de décès : elles servent à repérer des signaux d&#x27;alerte à confirmer, pas à décider d&#x27;un traitement individuel.</li></ul></div>
+  </div>
+</section>
+
+<h2 id="limites">Limites</h2>
+<div class="card"><ul>
+  <li><b>Peu de décès</b> (13) : intervalles de confiance larges, 1 à 2 variables au plus par modèle ; AUC apparentes (non validées sur d'autres patients), donc optimistes.</li>
+  <li>Comme dans l'article, chaque temps est analysé <b>séparément</b> : un même patient contribue à plusieurs panels sans que la corrélation entre ses mesures soit modélisée
+    (un modèle mixte ou un modèle de Cox à covariables dépendantes du temps serait l'étape suivante).</li>
+  <li>Les patients sans signes vitaux au temps t sont exclus du panel : si ces absences ne sont pas dues au hasard (patients trop graves, transferts), un biais est possible.</li>
+  <li>Les biologies (créatinine, transaminases, électrolytes) ne sont disponibles qu'à l'inclusion et pour une minorité : on ne peut pas reproduire leur suivi comme dans PALM.</li>
+  <li>Les associations ne sont pas causales et ne mesurent pas l'effet des traitements.</li>
+</ul></div>
+<script id="data-eff" type="application/json">{"labels": ["J0", "J1", "J3", "J5", "J7"], "n": [57, 55, 46, 39, 33], "deces": [13, 11, 5, 2, 1]}</script>
+
+
+</main>
+</div>
+</div>
+<script>
+(function(){ const m = document.getElementById("menu"), b = document.getElementById("bouton-menu");
+  b.addEventListener("click", e => { e.stopPropagation(); m.classList.toggle("ouvert"); });
+  document.addEventListener("click", e => { if (m.classList.contains("ouvert") && !m.contains(e.target)) m.classList.remove("ouvert"); }); })();
+</script>
+<script>
+const COUL = ["#2a78d6","#eb6834","#1baf7a","#eda100","#6250d6","#e87ba4","#008300","#e34948"];
+Chart.defaults.font.family = 'system-ui,"Segoe UI",sans-serif';
+Chart.defaults.color = "#52514e";
+Chart.defaults.borderColor = "#ebeae6";
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.maintainAspectRatio = false;
+const fr = (v, d=1) => v == null ? "-" : Number(v).toLocaleString("fr-FR", {maximumFractionDigits:d});
+function lire(id){ const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; }
+// barres horizontales d'une distribution {labels, valeurs, lignes:[{pct}]}
+function barresH(id, f, couleur=COUL[0], titre=""){
+  const el = document.getElementById(id); if(!el || !f) return;
+  const total = f.valeurs.reduce((a,b)=>a+b,0);
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{label:titre||"Effectif", data:f.valeurs,
+    backgroundColor:couleur, borderRadius:4, barThickness:18}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw} (${fr(100*c.raw/total)} %)`}}},
+      scales:{x:{beginAtZero:true, ticks:{precision:0}}, y:{grid:{display:false}}}}});
+}
+// barres horizontales en % (valeurs déjà en %), ex. symptômes
+function barresPct(id, f, couleur=COUL[0]){
+  const el = document.getElementById(id); if(!el || !f || !f.labels.length) return;
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{data:f.valeurs, backgroundColor:couleur, borderRadius:4, barThickness:14}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fr(c.raw)} % (${f.lignes[c.dataIndex].n}/${f.total})`}}},
+      scales:{x:{beginAtZero:true, max:100, title:{display:true,text:"% des participants"}}, y:{grid:{display:false}}}}});
+}
+// courbes : series = [{label, data, couleur}]
+function courbes(id, labels, series, titreY="", opts={}){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"line", data:{labels, datasets:series.map((s,i)=>({label:s.label, data:s.data, borderColor:s.couleur||COUL[i],
+      backgroundColor:s.couleur||COUL[i], borderWidth:2, pointRadius:3, spanGaps:true, yAxisID:"y"}))},
+    options:{interaction:{mode:"index", intersect:false}, scales:{y:{title:{display:true,text:titreY}, ...(opts.y||{})}, x:{grid:{display:false}, ...(opts.x||{})}}}});
+}
+function barresV(id, labels, valeurs, couleur=COUL[0], titre="Effectif"){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"bar", data:{labels, datasets:[{label:titre, data:valeurs, backgroundColor:couleur, borderRadius:3, maxBarThickness:28}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}, title:{display:true,text:titre}}, x:{grid:{display:false}}}}});
+}
+</script>
+
+<script>
+const e = lire("data-eff");
+if (e){
+  new Chart(document.getElementById("g-panels"), {type:"bar", data:{labels:e.labels, datasets:[
+      {label:"Patients observés", data:e.n, backgroundColor:COUL[0], borderRadius:3},
+      {label:"Décès ultérieurs", data:e.deces, backgroundColor:COUL[1], borderRadius:3}]},
+    options:{scales:{y:{beginAtZero:true, ticks:{precision:0}}, x:{grid:{display:false}}}}});
+}
+</script>
+
+</body>
+</html>

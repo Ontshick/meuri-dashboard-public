@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site Kisangani · MEURI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#8a8984; --line:#e4e3de;
+  --accent:#2a78d6; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#6250d6;
+  --ok:#1baf7a; --warn-bg:#fff6e0; --warn:#c98500; --err-bg:#fdecec; --err:#c03a39; --ok-bg:#e6f6ef;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.5 system-ui,"Segoe UI",sans-serif}
+/* ---- mise en page : menu latéral gauche + contenu ---- */
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+aside.menu{background:#14213d;color:#dfe5ef;position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px 30px}
+aside.menu .logo{padding:4px 10px 14px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:10px}
+aside.menu .logo b{display:block;font-size:16px;color:#fff} aside.menu .logo span{font-size:12px;color:#9fb0c9}
+aside.menu .groupe{margin:14px 0 4px;padding:0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8ea3c2;font-weight:700}
+aside.menu .groupe small{display:block;text-transform:none;letter-spacing:0;font-weight:400;color:#7d90ad}
+aside.menu a{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 0;border-radius:6px;color:#dfe5ef;text-decoration:none;font-size:14px}
+aside.menu a:hover{background:rgba(255,255,255,.07)}
+aside.menu a.actif{background:#2a78d6;color:#fff;font-weight:600}
+aside.menu a.sous{padding-left:28px;font-size:13.5px;color:#c4cfdf}
+aside.menu a.sous.actif{color:#fff}
+aside.menu .pastille{margin-left:auto;font-size:11px;background:rgba(255,255,255,.12);border-radius:8px;padding:0 6px}
+.contenu{min-width:0}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.wrap{max-width:1240px;margin:0 auto;padding:0 22px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;flex-wrap:wrap}
+.brand h1{font-size:19px;margin:0} .brand small{color:var(--ink2)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+#bouton-menu{display:none}
+main{padding:22px 0 60px}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  aside.menu{position:fixed;left:0;top:0;width:260px;z-index:30;transform:translateX(-100%);transition:transform .2s}
+  aside.menu.ouvert{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  #bouton-menu{display:inline-block}
+  .wrap{padding:0 16px}
+}
+h2{font-size:20px;margin:30px 0 12px} h2:first-child{margin-top:0} h3{font-size:16px;margin:0 0 10px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.grid-3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.2} .kpi span{color:var(--ink2);font-size:13px}
+.kpi.alerte b{color:var(--err)} .kpi.bon b{color:var(--ok)}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td.txt,table.t th.txt{text-align:left;white-space:normal}
+table.t thead th{border-bottom:2px solid var(--ink2);color:var(--ink2);font-weight:600}
+table.t tr.tot td{font-weight:600;border-top:2px solid var(--line)}
+.scroll{overflow-x:auto}
+.chart{position:relative;height:260px} .chart.h320{height:320px} .chart.h200{height:200px}
+.note{background:var(--warn-bg);border-left:3px solid var(--s4);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.info{background:#eaf2fc;border-left:3px solid var(--accent);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.msg{padding:10px 14px;border-radius:6px;margin-bottom:14px} .msg.success{background:var(--ok-bg)} .msg.error{background:var(--err-bg)}
+.muted{color:var(--ink2)} .petit{font-size:12.5px}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:var(--line)}
+.badge.dc{background:var(--err-bg);color:var(--err)} .badge.ok{background:var(--ok-bg);color:#0d7a52}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer;text-decoration:none}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+form.filtres{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+form.filtres label{display:block;font-size:12px;color:var(--ink2)}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.vide{text-align:center;padding:60px 20px}
+.methodo ol.etapes{padding-left:18px;margin:6px 0} .methodo ol.etapes li{margin-bottom:8px}
+.methodo details{margin-top:8px} .methodo summary{cursor:pointer;color:var(--accent)}
+section.interpretation{margin-top:30px;padding:18px;border-radius:12px;background:#eef5fd;border:2px solid #b9d4f3}
+section.interpretation h2{margin-top:0;color:#1d5fae}
+section.interpretation .card ul{padding-left:18px;margin:0} section.interpretation .card li{margin-bottom:6px}
+section.interpretation .card.conclusion{border:2px solid #1d5fae;grid-column:1 / -1}
+.sommaire{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px} .sommaire a{font-size:13px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+</style>
+
+</head>
+<body>
+<div class="app">
+<aside class="menu" id="menu">
+  <div class="logo"><b>MEURI RDC - Ebola</b><span>Protocole EAP Remdesivir / MBP134 · REDCap</span></div>
+
+  <div class="groupe">Tableau de bord</div>
+  <a href="../../index.html" class="">🌍 Vue d'ensemble</a>
+  <div class="groupe" style="margin-top:6px">Sites</div>
+  <a class="sous " href="../BIAKATO/index.html">📍 Biakato</a><a class="sous " href="../BUTA/index.html">📍 Buta</a><a class="sous " href="../BUTEMBO/index.html">📍 Butembo</a><a class="sous " href="../ISIRO/index.html">📍 Isiro</a><a class="sous actif" href="index.html">📍 Kisangani</a><a class="sous " href="../SUD-UBANGI/index.html">📍 Sud-Ubangi</a>
+  <div class="groupe" style="margin-top:6px">Analyses tous sites</div>
+  <a class="sous " href="../../confirmes/index.html">Cas confirmés</a>
+  <a class="sous " href="../../pep/index.html">PEP</a>
+  <a class="sous " href="../../securite/index.html">Sécurité (EI)</a>
+  <a class="sous " href="../../suivi/index.html">Suivi clinique & PCR</a>
+  
+
+  <div class="groupe">Modélisation du décès</div>
+  <a class="sous " href="../../modelisation/index.html">1 - Firth et survie</a>
+  <a class="sous " href="../../modelisation-temps/index.html">2 - Facteurs dans le temps</a>
+
+  <div class="groupe">Données</div>
+  <a href="../../donnees/index.html" class="">✔ Contrôle qualité</a>
+  <a class="sous " href="../../donnees/site-BIAKATO/index.html">Biakato</a><a class="sous " href="../../donnees/site-BUTA/index.html">Buta</a><a class="sous " href="../../donnees/site-BUTEMBO/index.html">Butembo</a><a class="sous " href="../../donnees/site-ISIRO/index.html">Isiro</a><a class="sous " href="../../donnees/site-KISANGANI/index.html">Kisangani</a><a class="sous " href="../../donnees/site-SUD-UBANGI/index.html">Sud-Ubangi</a>
+  
+
+  <div class="groupe">Version statique<small>Instantané des données au 14/11/2026 ; données agrégées, sans identifiant de participant.</small></div>
+  
+</aside>
+<div class="contenu">
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <div><button class="btn sec petit" id="bouton-menu" type="button" aria-label="Ouvrir le menu">☰ Menu</button>
+      <h1 style="display:inline">Site de Kisangani - protocole EAP</h1><br>
+      <small>MEURI RDC - protocole EAP · données au <b>14/11/2026</b> · dernier import : MEURIRemdesivirMBP13_DATA_LABELS_2026-11-14_1428.csv (14/11/2026 17:50)</small></div>
+    
+  </div>
+</div></header>
+<main class="wrap">
+
+
+
+<div class="kpis">
+  <div class="kpi"><b>193</b><span>participants inclus</span></div>
+  <div class="kpi"><b>7</b><span>cas confirmés</span></div>
+  <div class="kpi"><b>186</b><span>contacts sous PEP</span></div>
+  <div class="kpi alerte"><b>1</b><span>décès (cas confirmés)</span></div>
+  <div class="kpi alerte"><b>100,0 %</b><span>létalité (1 issues connues)</span></div>
+  <div class="kpi"><b>1624</b><span>perfusions administrées</span></div>
+  <div class="kpi"><b>0</b><span>participants avec ≥ 1 EI</span></div>
+</div>
+
+<h2>Le site comparé à l'ensemble des 6 sites</h2>
+<div class="card scroll"><table class="t">
+  <thead><tr><th class="txt">Indicateur</th><th>Kisangani</th><th>Ensemble des sites</th></tr></thead>
+  <tbody><tr><td class="txt">Part des participants de l&#x27;ensemble (%)</td><td><b>44,2</b></td><td>100</td></tr><tr><td class="txt">Létalité des cas confirmés (%)</td><td><b>100</b></td><td>22,8</td></tr><tr><td class="txt">Âge médian des cas confirmés (ans)</td><td><b>45,5</b></td><td>28,5</td></tr><tr><td class="txt">Délai début symptômes → inclusion, médiane (j)</td><td><b>8,5</b></td><td>7</td></tr><tr><td class="txt">Délai exposition → 1re perfusion PEP, médiane (j)</td><td><b>5</b></td><td>5</td></tr><tr><td class="txt">PEP avec au moins une perfusion enregistrée (%)</td><td><b>95,7</b></td><td>63,4</td></tr><tr><td class="txt">Participants avec ≥ 1 événement indésirable (%)</td><td><b>0</b></td><td>11</td></tr></tbody>
+</table>
+<p class="petit muted">Les petits sites ont peu de patients : un écart avec l'ensemble peut être dû au hasard.</p></div>
+
+<div class="grid" style="margin-top:16px">
+  <div class="card"><h3>Inclusions par semaine</h3><div class="chart"><canvas id="g-incl"></canvas></div></div>
+  <div class="card"><h3>Issue des cas confirmés</h3><div class="chart h200"><canvas id="g-issue"></canvas></div>
+    <table class="t">
+  <thead><tr><th>Issue</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Décédé</td><td>1</td><td>14,3</td></tr><tr><td>En cours / non renseigné</td><td>6</td><td>85,7</td></tr>
+  <tr class="tot"><td>Total</td><td>7</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+
+<h2>Cas confirmés (7)</h2>
+<div class="grid-3">
+  <div class="card"><h3>Âge</h3><div class="scroll"><table class="t">
+  <thead><tr><th>Variable</th><th>n</th><th>Moyenne</th><th>Écart-type</th><th>Min</th><th>Q1</th><th>Médiane</th><th>Q3</th><th>Max</th></tr></thead>
+  <tbody>
+  <tr><td class="txt">Âge (ans)</td><td>3</td><td>45,2</td><td>2,0</td>
+    <td>43</td><td>44,2</td><td><b>45,5</b></td><td>46,2</td><td>47</td></tr>
+  </tbody>
+</table></div>
+<table class="t">
+  <thead><tr><th>Sexe</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Non renseigné</td><td>4</td><td>57,1</td></tr><tr><td>Masculin</td><td>3</td><td>42,9</td></tr>
+  <tr class="tot"><td>Total</td><td>7</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Traitement</h3><table class="t">
+  <thead><tr><th>Traitement</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Non renseigné</td><td>4</td><td>57,1</td></tr><tr><td>MBP134</td><td>3</td><td>42,9</td></tr>
+  <tr class="tot"><td>Total</td><td>7</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Délais (jours)</h3><div class="scroll"><table class="t">
+  <thead><tr><th>Délai</th><th>n</th><th>Moyenne</th><th>Écart-type</th><th>Min</th><th>Q1</th><th>Médiane</th><th>Q3</th><th>Max</th></tr></thead>
+  <tbody>
+  <tr><td class="txt">Début symptômes → inclusion</td><td>2</td><td>8,5</td><td>0,7</td>
+    <td>8</td><td>8,2</td><td><b>8,5</b></td><td>8,8</td><td>9</td></tr><tr><td class="txt">Inclusion → 1re perfusion</td><td>3</td><td>0,0</td><td>0,0</td>
+    <td>0</td><td>0</td><td><b>0</b></td><td>0</td><td>0</td></tr><tr><td class="txt">1re perfusion → sortie</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">1re perfusion → décès</td><td>1</td><td>2,0</td><td></td>
+    <td>2</td><td>2</td><td><b>2</b></td><td>2</td><td>2</td></tr>
+  </tbody>
+</table></div>
+</div>
+</div>
+<div class="grid" style="margin-top:16px">
+  <div class="card"><h3>Symptômes à l'inclusion</h3><div class="chart h320"><canvas id="g-sympt"></canvas></div></div>
+  <div class="card"><h3>Biologie à l'inclusion</h3><div class="scroll"><table class="t">
+  <thead><tr><th>Analyse</th><th>n</th><th>Moyenne</th><th>Écart-type</th><th>Min</th><th>Q1</th><th>Médiane</th><th>Q3</th><th>Max</th></tr></thead>
+  <tbody>
+  <tr><td class="txt">Ct GP (inclusion)</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">Ct NP (inclusion)</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">Créatinine (mg/dL)</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">Potassium</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">Sodium</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">ASAT (U/L)</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr><tr><td class="txt">ALAT (U/L)</td><td>0</td><td></td><td></td>
+    <td></td><td></td><td><b></b></td><td></td><td></td></tr>
+  </tbody>
+</table></div>
+</div>
+</div>
+<p><a href="../../confirmes/site-KISANGANI/index.html">→ Analyse détaillée des cas confirmés de Kisangani</a></p>
+
+
+
+<h2>Contacts sous PEP (186)</h2>
+<p class="note">178 contacts sur 186 ont au moins une perfusion enregistrée dans REDCap ; pour les autres, les formulaires de perfusion ne sont pas saisis.</p>
+<div class="grid-3">
+  <div class="card"><h3>Niveau de risque</h3><table class="t">
+  <thead><tr><th>Risque</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Haut</td><td>16</td><td>8,6</td></tr><tr><td>Intermédiaire</td><td>164</td><td>88,2</td></tr><tr><td>Non renseigné</td><td>6</td><td>3,2</td></tr>
+  <tr class="tot"><td>Total</td><td>186</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Délai exposition → 1re perfusion</h3><table class="t">
+  <thead><tr><th>Délai</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>0-2 j</td><td>20</td><td>10,8</td></tr><tr><td>3-5 j</td><td>39</td><td>21,0</td></tr><tr><td>6-9 j</td><td>32</td><td>17,2</td></tr><tr><td>10 j et +</td><td>18</td><td>9,7</td></tr><tr><td>Non renseigné</td><td>77</td><td>41,4</td></tr>
+  <tr class="tot"><td>Total</td><td>186</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Perfusions reçues</h3><table class="t">
+  <thead><tr><th>Perfusions</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  <tr><td>Aucune perfusion</td><td>8</td><td>4,3</td></tr><tr><td>1 perfusion</td><td>14</td><td>7,5</td></tr><tr><td>2 à 9 perfusions</td><td>22</td><td>11,8</td></tr><tr><td>10 perfusions ou plus</td><td>142</td><td>76,3</td></tr>
+  <tr class="tot"><td>Total</td><td>186</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+<p><a href="../../pep/site-KISANGANI/index.html">→ Analyse détaillée des PEP de Kisangani</a></p>
+
+
+
+<h2>Sécurité</h2>
+<div class="grid-3">
+  <div class="card"><h3>Événements indésirables</h3><p><b>0</b> EI chez <b>0</b> participants (0,0 %), dont <b>0</b> graves.</p>
+    <p>1 perfusion interrompue sur 1624.</p></div>
+  <div class="card"><h3>Sévérité</h3><table class="t">
+  <thead><tr><th>Sévérité</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  
+  <tr class="tot"><td>Total</td><td>0</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+  <div class="card"><h3>Lien avec le traitement</h3><table class="t">
+  <thead><tr><th>Relation</th><th>Effectif</th><th>%</th></tr></thead>
+  <tbody>
+  
+  <tr class="tot"><td>Total</td><td>0</td><td>100</td></tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+<script id="data-d" type="application/json">{"nom": "KISANGANI", "v": {"n": 193, "n_conf": 7, "n_pep": 186, "n_sites": 1, "deces": 1, "sortis": 0, "letalite": 100.0, "n_connus": 1, "part_ei": 0, "nb_eig": 0, "perfusions": 1624, "sites": [{"site": "KISANGANI", "confirmes": 7, "pep": 186, "deces": 1, "sortis": 0, "letalite": 100.0, "ei": 0, "perfusions": 1624}], "inclusions": {"labels": ["13/07", "20/07", "27/07", "03/08", "10/08", "17/08", "24/08", "31/08", "07/09", "14/09", "21/09", "28/09", "05/10", "12/10", "19/10"], "confirmes": [0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "pep": [2, 0, 10, 1, 15, 21, 13, 30, 6, 42, 16, 17, 6, 0, 1]}, "trt_conf": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 4, "pct": 57.1}, {"modalite": "MBP134", "n": 3, "pct": 42.9}], "total": 7, "labels": ["Non renseign\u00e9", "MBP134"], "valeurs": [4, 3]}, "trt_pep": {"lignes": [{"modalite": "Remdesivir", "n": 167, "pct": 89.8}, {"modalite": "MBP134", "n": 11, "pct": 5.9}, {"modalite": "Non renseign\u00e9", "n": 8, "pct": 4.3}], "total": 186, "labels": ["Remdesivir", "MBP134", "Non renseign\u00e9"], "valeurs": [167, 11, 8]}, "issue_conf": {"lignes": [{"modalite": "D\u00e9c\u00e9d\u00e9", "n": 1, "pct": 14.3}, {"modalite": "En cours / non renseign\u00e9", "n": 6, "pct": 85.7}], "total": 7, "labels": ["D\u00e9c\u00e9d\u00e9", "En cours / non renseign\u00e9"], "valeurs": [1, 6]}, "deduits": 149}, "c": {"n": 7, "age": {"nom": "\u00c2ge (ans)", "n": 3, "moyenne": 45.2, "ecart_type": 2.0, "min": 43.0, "q1": 44.2, "mediane": 45.5, "q3": 46.2, "max": 47.0}, "age_liste": [{"nom": "\u00c2ge (ans)", "n": 3, "moyenne": 45.2, "ecart_type": 2.0, "min": 43.0, "q1": 44.2, "mediane": 45.5, "q3": 46.2, "max": 47.0}], "sexe": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 4, "pct": 57.1}, {"modalite": "Masculin", "n": 3, "pct": 42.9}], "total": 7, "labels": ["Non renseign\u00e9", "Masculin"], "valeurs": [4, 3]}, "classe_age": {"lignes": [{"modalite": "35-44", "n": 1, "pct": 14.3}, {"modalite": "45-54", "n": 2, "pct": 28.6}, {"modalite": "Non renseign\u00e9", "n": 4, "pct": 57.1}], "total": 7, "labels": ["35-44", "45-54", "Non renseign\u00e9"], "valeurs": [1, 2, 4]}, "site": {"lignes": [{"modalite": "KISANGANI", "n": 7, "pct": 100.0}], "total": 7, "labels": ["KISANGANI"], "valeurs": [7]}, "traitement": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 4, "pct": 57.1}, {"modalite": "MBP134", "n": 3, "pct": 42.9}], "total": 7, "labels": ["Non renseign\u00e9", "MBP134"], "valeurs": [4, 3]}, "issue": {"lignes": [{"modalite": "D\u00e9c\u00e9d\u00e9", "n": 1, "pct": 14.3}, {"modalite": "En cours / non renseign\u00e9", "n": 6, "pct": 85.7}], "total": 7, "labels": ["D\u00e9c\u00e9d\u00e9", "En cours / non renseign\u00e9"], "valeurs": [1, 6]}, "deces": 1, "sortis": 0, "n_connus": 1, "letalite": 100.0, "vaccin": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 4, "pct": 57.1}, {"modalite": "Non", "n": 3, "pct": 42.9}], "total": 7, "labels": ["Non renseign\u00e9", "Non"], "valeurs": [4, 3]}, "paludisme": {"lignes": [{"modalite": "Non renseign\u00e9", "n": 4, "pct": 57.1}, {"modalite": "Not done", "n": 3, "pct": 42.9}], "total": 7, "labels": ["Non renseign\u00e9", "Not done"], "valeurs": [4, 3]}, "symptomes": {"lignes": [{"modalite": "Diarrh\u00e9e", "n": 3, "pct": 42.9}, {"modalite": "Douleurs abdominales", "n": 3, "pct": 42.9}, {"modalite": "C\u00e9phal\u00e9es", "n": 2, "pct": 28.6}, {"modalite": "Vomissements", "n": 2, "pct": 28.6}, {"modalite": "Fi\u00e8vre", "n": 1, "pct": 14.3}, {"modalite": "Essoufflement/Difficult\u00e9s respiratoires", "n": 1, "pct": 14.3}, {"modalite": "Toux", "n": 1, "pct": 14.3}, {"modalite": "Injection conjonctivale", "n": 1, "pct": 14.3}], "labels": ["Diarrh\u00e9e", "Douleurs abdominales", "C\u00e9phal\u00e9es", "Vomissements", "Fi\u00e8vre", "Essoufflement/Difficult\u00e9s respiratoires", "Toux", "Injection conjonctivale"], "valeurs": [42.9, 42.9, 28.6, 28.6, 14.3, 14.3, 14.3, 14.3], "total": 7}, "comorbidites": {"lignes": [], "labels": [], "valeurs": [], "total": 7}, "avec_comorbidite": 0, "vitaux": [{"nom": "Temp\u00e9rature (\u00b0C)", "n": 3, "moyenne": 36.9, "ecart_type": 0.8, "min": 36.0, "q1": 36.6, "mediane": 37.3, "q3": 37.4, "max": 37.5}, {"nom": "Fr\u00e9quence cardiaque", "n": 3, "moyenne": 93.7, "ecart_type": 21.7, "min": 69.0, "q1": 85.5, "mediane": 102.0, "q3": 106.0, "max": 110.0}, {"nom": "Fr\u00e9quence respiratoire", "n": 3, "moyenne": 23.7, "ecart_type": 1.5, "min": 22.0, "q1": 23.0, "mediane": 24.0, "q3": 24.5, "max": 25.0}, {"nom": "SpO2 (%)", "n": 2, "moyenne": 98.0, "ecart_type": 2.8, "min": 96.0, "q1": 97.0, "mediane": 98.0, "q3": 99.0, "max": 100.0}, {"nom": "PA systolique", "n": 3, "moyenne": 121.7, "ecart_type": 7.6, "min": 115.0, "q1": 117.5, "mediane": 120.0, "q3": 125.0, "max": 130.0}, {"nom": "PA diastolique", "n": 2, "moyenne": 68.0, "ecart_type": 4.2, "min": 65.0, "q1": 66.5, "mediane": 68.0, "q3": 69.5, "max": 71.0}, {"nom": "Poids (kg)", "n": 3, "moyenne": 61.3, "ecart_type": 11.6, "min": 48.0, "q1": 57.5, "mediane": 67.0, "q3": 68.0, "max": 69.0}], "bio": [{"nom": "Ct GP (inclusion)", "n": 0}, {"nom": "Ct NP (inclusion)", "n": 0}, {"nom": "Cr\u00e9atinine (mg/dL)", "n": 0}, {"nom": "Potassium", "n": 0}, {"nom": "Sodium", "n": 0}, {"nom": "ASAT (U/L)", "n": 0}, {"nom": "ALAT (U/L)", "n": 0}], "delais": [{"nom": "D\u00e9but sympt\u00f4mes \u2192 inclusion", "n": 2, "moyenne": 8.5, "ecart_type": 0.7, "min": 8.0, "q1": 8.2, "mediane": 8.5, "q3": 8.8, "max": 9.0}, {"nom": "Inclusion \u2192 1re perfusion", "n": 3, "moyenne": 0.0, "ecart_type": 0.0, "min": 0.0, "q1": 0.0, "mediane": 0.0, "q3": 0.0, "max": 0.0}, {"nom": "1re perfusion \u2192 sortie", "n": 0}, {"nom": "1re perfusion \u2192 d\u00e9c\u00e8s", "n": 1, "moyenne": 2.0, "ecart_type": null, "min": 2.0, "q1": 2.0, "mediane": 2.0, "q3": 2.0, "max": 2.0}], "perfusions": [{"nom": "Nombre de perfusions", "n": 7, "moyenne": 0.4, "ecart_type": 0.5, "min": 0.0, "q1": 0.0, "mediane": 0.0, "q3": 1.0, "max": 1.0}, {"nom": "Dose totale (mg)", "n": 3, "moyenne": 3066.7, "ecart_type": 579.5, "min": 2400.0, "q1": 2875.0, "mediane": 3350.0, "q3": 3400.0, "max": 3450.0}], "let_site": [{"modalite": "KISANGANI", "n": 1, "deces": 1, "letalite": 100.0}], "let_trt": [{"modalite": "MBP134", "n": 1, "deces": 1, "letalite": 100.0}], "let_sexe": [{"modalite": "Masculin", "n": 1, "deces": 1, "letalite": 100.0}], "let_age": [{"modalite": "45-54", "n": 1, "deces": 1, "letalite": 100.0}], "issue_med": [{"issue": "Sorti gu\u00e9ri", "n": 0, "age": null, "ct_gp": null, "ct_np": null, "nb_sympt": null, "temperature": null}, {"issue": "D\u00e9c\u00e9d\u00e9", "n": 1, "age": 47.0, "ct_gp": null, "ct_np": null, "nb_sympt": 6.0, "temperature": 37.3}], "courbe": {"labels": ["27/07", "03/08", "10/08"], "valeurs": [1, 0, 2]}}, "p": {"n": 186, "age": {"nom": "\u00c2ge (ans)", "n": 174, "moyenne": 31.8, "ecart_type": 15.9, "min": 0.0, "q1": 24.0, "mediane": 30.0, "q3": 41.0, "max": 74.0}, "sexe": {"lignes": [{"modalite": "F\u00e9minin", "n": 91, "pct": 48.9}, {"modalite": "Masculin", "n": 86, "pct": 46.2}, {"modalite": "Non renseign\u00e9", "n": 9, "pct": 4.8}], "total": 186, "labels": ["F\u00e9minin", "Masculin", "Non renseign\u00e9"], "valeurs": [91, 86, 9]}, "site": {"lignes": [{"modalite": "KISANGANI", "n": 186, "pct": 100.0}], "total": 186, "labels": ["KISANGANI"], "valeurs": [186]}, "risque": {"lignes": [{"modalite": "Haut", "n": 16, "pct": 8.6}, {"modalite": "Interm\u00e9diaire", "n": 164, "pct": 88.2}, {"modalite": "Non renseign\u00e9", "n": 6, "pct": 3.2}], "total": 186, "labels": ["Haut", "Interm\u00e9diaire", "Non renseign\u00e9"], "valeurs": [16, 164, 6]}, "mode": {"lignes": [{"modalite": "Eclaboussure de liquide corporel sur une peau intacte", "n": 82, "pct": 92.1}, {"modalite": "Eclaboussure de liquide corporel sur une peau bless\u00e9e", "n": 2, "pct": 2.2}, {"modalite": "Autre", "n": 2, "pct": 2.2}, {"modalite": "Piq\u00fbre d'aiguille", "n": 2, "pct": 2.2}, {"modalite": "Coupure avec un scalpel ou autre objet pointu", "n": 1, "pct": 1.1}], "total": 89, "labels": ["Eclaboussure de liquide corporel sur une peau intacte", "Eclaboussure de liquide corporel sur une peau bless\u00e9e", "Autre", "Piq\u00fbre d'aiguille", "Coupure avec un scalpel ou autre objet pointu"], "valeurs": [82, 2, 2, 2, 1]}, "expo": {"lignes": [{"modalite": "Oui", "n": 122, "pct": 65.6}, {"modalite": "Non", "n": 58, "pct": 31.2}, {"modalite": "Non renseign\u00e9", "n": 6, "pct": 3.2}], "total": 186, "labels": ["Oui", "Non", "Non renseign\u00e9"], "valeurs": [122, 58, 6]}, "administree": {"lignes": [{"modalite": "Oui", "n": 179, "pct": 96.2}, {"modalite": "Non renseign\u00e9", "n": 7, "pct": 3.8}], "total": 186, "labels": ["Oui", "Non renseign\u00e9"], "valeurs": [179, 7]}, "traitement": {"lignes": [{"modalite": "Remdesivir", "n": 167, "pct": 89.8}, {"modalite": "MBP134", "n": 11, "pct": 5.9}, {"modalite": "Non renseign\u00e9", "n": 8, "pct": 4.3}], "total": 186, "labels": ["Remdesivir", "MBP134", "Non renseign\u00e9"], "valeurs": [167, 11, 8]}, "vaccin": {"lignes": [{"modalite": "Non", "n": 160, "pct": 86.0}, {"modalite": "Oui", "n": 15, "pct": 8.1}, {"modalite": "Non renseign\u00e9", "n": 11, "pct": 5.9}], "total": 186, "labels": ["Non", "Oui", "Non renseign\u00e9"], "valeurs": [160, 15, 11]}, "schema": {"lignes": [{"modalite": "Aucune perfusion", "n": 8, "pct": 4.3}, {"modalite": "1 perfusion", "n": 14, "pct": 7.5}, {"modalite": "2 \u00e0 9 perfusions", "n": 22, "pct": 11.8}, {"modalite": "10 perfusions ou plus", "n": 142, "pct": 76.3}], "total": 186, "labels": ["Aucune perfusion", "1 perfusion", "2 \u00e0 9 perfusions", "10 perfusions ou plus"], "valeurs": [8, 14, 22, 142]}, "delai": {"nom": "Exposition \u2192 1re perfusion", "n": 109, "moyenne": 6.0, "ecart_type": 4.0, "min": 0.0, "q1": 3.0, "mediane": 5.0, "q3": 7.0, "max": 18.0}, "delai_liste": [{"nom": "Exposition \u2192 1re perfusion", "n": 109, "moyenne": 6.0, "ecart_type": 4.0, "min": 0.0, "q1": 3.0, "mediane": 5.0, "q3": 7.0, "max": 18.0}], "delai_classes": {"lignes": [{"modalite": "0-2 j", "n": 20, "pct": 10.8}, {"modalite": "3-5 j", "n": 39, "pct": 21.0}, {"modalite": "6-9 j", "n": 32, "pct": 17.2}, {"modalite": "10 j et +", "n": 18, "pct": 9.7}, {"modalite": "Non renseign\u00e9", "n": 77, "pct": 41.4}], "total": 186, "labels": ["0-2 j", "3-5 j", "6-9 j", "10 j et +", "Non renseign\u00e9"], "valeurs": [20, 39, 32, 18, 77]}, "pct_2j": 18.3, "perfusions": [{"nom": "Nombre de perfusions", "n": 186, "moyenne": 8.7, "ecart_type": 3.2, "min": 0.0, "q1": 10.0, "mediane": 10.0, "q3": 10.0, "max": 14.0}, {"nom": "Dose totale (mg)", "n": 178, "moyenne": 1022.3, "ecart_type": 400.5, "min": 0.0, "q1": 1000.0, "mediane": 1100.0, "q3": 1100.0, "max": 3850.0}], "vivant": {"lignes": [{"modalite": "Oui", "n": 168, "pct": 90.3}, {"modalite": "Non renseign\u00e9", "n": 18, "pct": 9.7}], "total": 186, "labels": ["Oui", "Non renseign\u00e9"], "valeurs": [168, 18]}, "termine": {"lignes": [{"modalite": "Oui", "n": 141, "pct": 75.8}, {"modalite": "Non renseign\u00e9", "n": 35, "pct": 18.8}, {"modalite": "Non", "n": 10, "pct": 5.4}], "total": 186, "labels": ["Oui", "Non renseign\u00e9", "Non"], "valeurs": [141, 35, 10]}, "traites": 178, "deces": 0, "par_site": [{"site": "KISANGANI", "n": 186, "traites": 178, "ei": 0, "haut": 16, "delai": 5.0, "vivants": 168}], "courbe": {"labels": ["13/07", "20/07", "27/07", "03/08", "10/08", "17/08", "24/08", "31/08", "07/09", "14/09", "21/09", "28/09", "05/10"], "valeurs": [2, 0, 9, 1, 14, 22, 13, 30, 6, 42, 16, 17, 6]}}, "s": {"n": 193, "n_ei": 0, "part_ei": 0, "pct_ei": 0.0, "nb_eig": 0, "groupes": [{"type": "Confirm\u00e9", "traitement": "MBP134", "n": 3, "avec_ei": 0, "pct": 0.0, "eig": 0, "interrompues": 0, "reactions": 0}, {"type": "Confirm\u00e9", "traitement": "Non renseign\u00e9", "n": 4, "avec_ei": 0, "pct": 0.0, "eig": 0, "interrompues": 0, "reactions": 0}, {"type": "PEP", "traitement": "MBP134", "n": 11, "avec_ei": 0, "pct": 0.0, "eig": 0, "interrompues": 0, "reactions": 0}, {"type": "PEP", "traitement": "Non renseign\u00e9", "n": 8, "avec_ei": 0, "pct": 0.0, "eig": 0, "interrompues": 0, "reactions": 0}, {"type": "PEP", "traitement": "Remdesivir", "n": 167, "avec_ei": 0, "pct": 0.0, "eig": 0, "interrompues": 1, "reactions": 1}], "severite": {"lignes": [], "labels": [], "valeurs": [], "total": 0}, "relation": {"lignes": [], "labels": [], "valeurs": [], "total": 0}, "gravite": {"lignes": [], "labels": [], "valeurs": [], "total": 0}, "issue": {"lignes": [], "labels": [], "valeurs": [], "total": 0}, "actions": {"lignes": [], "labels": [], "valeurs": [], "total": 0}, "termes": [], "perfusions": 1624, "perf_interrompues": 1, "reactions": 1, "medicaments": []}, "comparaison": [{"indicateur": "Part des participants de l'ensemble (%)", "site": 44.2, "ensemble": 100.0, "unite": "%"}, {"indicateur": "L\u00e9talit\u00e9 des cas confirm\u00e9s (%)", "site": 100.0, "ensemble": 22.8, "unite": "%"}, {"indicateur": "\u00c2ge m\u00e9dian des cas confirm\u00e9s (ans)", "site": 45.5, "ensemble": 28.5, "unite": ""}, {"indicateur": "D\u00e9lai d\u00e9but sympt\u00f4mes \u2192 inclusion, m\u00e9diane (j)", "site": 8.5, "ensemble": 7.0, "unite": ""}, {"indicateur": "D\u00e9lai exposition \u2192 1re perfusion PEP, m\u00e9diane (j)", "site": 5.0, "ensemble": 5.0, "unite": ""}, {"indicateur": "PEP avec au moins une perfusion enregistr\u00e9e (%)", "site": 95.7, "ensemble": 63.4, "unite": "%"}, {"indicateur": "Participants avec \u2265 1 \u00e9v\u00e9nement ind\u00e9sirable (%)", "site": 0.0, "ensemble": 11.0, "unite": "%"}]}</script>
+
+
+</main>
+</div>
+</div>
+<script>
+(function(){ const m = document.getElementById("menu"), b = document.getElementById("bouton-menu");
+  b.addEventListener("click", e => { e.stopPropagation(); m.classList.toggle("ouvert"); });
+  document.addEventListener("click", e => { if (m.classList.contains("ouvert") && !m.contains(e.target)) m.classList.remove("ouvert"); }); })();
+</script>
+<script>
+const COUL = ["#2a78d6","#eb6834","#1baf7a","#eda100","#6250d6","#e87ba4","#008300","#e34948"];
+Chart.defaults.font.family = 'system-ui,"Segoe UI",sans-serif';
+Chart.defaults.color = "#52514e";
+Chart.defaults.borderColor = "#ebeae6";
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.maintainAspectRatio = false;
+const fr = (v, d=1) => v == null ? "-" : Number(v).toLocaleString("fr-FR", {maximumFractionDigits:d});
+function lire(id){ const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; }
+// barres horizontales d'une distribution {labels, valeurs, lignes:[{pct}]}
+function barresH(id, f, couleur=COUL[0], titre=""){
+  const el = document.getElementById(id); if(!el || !f) return;
+  const total = f.valeurs.reduce((a,b)=>a+b,0);
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{label:titre||"Effectif", data:f.valeurs,
+    backgroundColor:couleur, borderRadius:4, barThickness:18}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw} (${fr(100*c.raw/total)} %)`}}},
+      scales:{x:{beginAtZero:true, ticks:{precision:0}}, y:{grid:{display:false}}}}});
+}
+// barres horizontales en % (valeurs déjà en %), ex. symptômes
+function barresPct(id, f, couleur=COUL[0]){
+  const el = document.getElementById(id); if(!el || !f || !f.labels.length) return;
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{data:f.valeurs, backgroundColor:couleur, borderRadius:4, barThickness:14}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fr(c.raw)} % (${f.lignes[c.dataIndex].n}/${f.total})`}}},
+      scales:{x:{beginAtZero:true, max:100, title:{display:true,text:"% des participants"}}, y:{grid:{display:false}}}}});
+}
+// courbes : series = [{label, data, couleur}]
+function courbes(id, labels, series, titreY="", opts={}){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"line", data:{labels, datasets:series.map((s,i)=>({label:s.label, data:s.data, borderColor:s.couleur||COUL[i],
+      backgroundColor:s.couleur||COUL[i], borderWidth:2, pointRadius:3, spanGaps:true, yAxisID:"y"}))},
+    options:{interaction:{mode:"index", intersect:false}, scales:{y:{title:{display:true,text:titreY}, ...(opts.y||{})}, x:{grid:{display:false}, ...(opts.x||{})}}}});
+}
+function barresV(id, labels, valeurs, couleur=COUL[0], titre="Effectif"){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"bar", data:{labels, datasets:[{label:titre, data:valeurs, backgroundColor:couleur, borderRadius:3, maxBarThickness:28}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}, title:{display:true,text:titre}}, x:{grid:{display:false}}}}});
+}
+</script>
+
+<script>
+const d = lire("data-d");
+if (d){
+  const v = d.v;
+  new Chart(document.getElementById("g-incl"), {type:"bar", data:{labels:v.inclusions.labels, datasets:[
+      {label:"Cas confirmés", data:v.inclusions.confirmes, backgroundColor:COUL[1], borderRadius:3},
+      {label:"PEP", data:v.inclusions.pep, backgroundColor:COUL[2], borderRadius:3}]},
+    options:{scales:{x:{stacked:true, grid:{display:false}}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}}}});
+  barresH("g-issue", v.issue_conf, COUL[0]);
+  if (d.c) barresPct("g-sympt", d.c.symptomes, COUL[1]);
+}
+</script>
+
+</body>
+</html>

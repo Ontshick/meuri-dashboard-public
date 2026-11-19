@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Données - contrôle qualité · MEURI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#8a8984; --line:#e4e3de;
+  --accent:#2a78d6; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#6250d6;
+  --ok:#1baf7a; --warn-bg:#fff6e0; --warn:#c98500; --err-bg:#fdecec; --err:#c03a39; --ok-bg:#e6f6ef;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.5 system-ui,"Segoe UI",sans-serif}
+/* ---- mise en page : menu latéral gauche + contenu ---- */
+.app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+aside.menu{background:#14213d;color:#dfe5ef;position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px 30px}
+aside.menu .logo{padding:4px 10px 14px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:10px}
+aside.menu .logo b{display:block;font-size:16px;color:#fff} aside.menu .logo span{font-size:12px;color:#9fb0c9}
+aside.menu .groupe{margin:14px 0 4px;padding:0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8ea3c2;font-weight:700}
+aside.menu .groupe small{display:block;text-transform:none;letter-spacing:0;font-weight:400;color:#7d90ad}
+aside.menu a{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 0;border-radius:6px;color:#dfe5ef;text-decoration:none;font-size:14px}
+aside.menu a:hover{background:rgba(255,255,255,.07)}
+aside.menu a.actif{background:#2a78d6;color:#fff;font-weight:600}
+aside.menu a.sous{padding-left:28px;font-size:13.5px;color:#c4cfdf}
+aside.menu a.sous.actif{color:#fff}
+aside.menu .pastille{margin-left:auto;font-size:11px;background:rgba(255,255,255,.12);border-radius:8px;padding:0 6px}
+.contenu{min-width:0}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.wrap{max-width:1240px;margin:0 auto;padding:0 22px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;flex-wrap:wrap}
+.brand h1{font-size:19px;margin:0} .brand small{color:var(--ink2)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+#bouton-menu{display:none}
+main{padding:22px 0 60px}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  aside.menu{position:fixed;left:0;top:0;width:260px;z-index:30;transform:translateX(-100%);transition:transform .2s}
+  aside.menu.ouvert{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  #bouton-menu{display:inline-block}
+  .wrap{padding:0 16px}
+}
+h2{font-size:20px;margin:30px 0 12px} h2:first-child{margin-top:0} h3{font-size:16px;margin:0 0 10px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.grid-3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.2} .kpi span{color:var(--ink2);font-size:13px}
+.kpi.alerte b{color:var(--err)} .kpi.bon b{color:var(--ok)}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td.txt,table.t th.txt{text-align:left;white-space:normal}
+table.t thead th{border-bottom:2px solid var(--ink2);color:var(--ink2);font-weight:600}
+table.t tr.tot td{font-weight:600;border-top:2px solid var(--line)}
+.scroll{overflow-x:auto}
+.chart{position:relative;height:260px} .chart.h320{height:320px} .chart.h200{height:200px}
+.note{background:var(--warn-bg);border-left:3px solid var(--s4);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.info{background:#eaf2fc;border-left:3px solid var(--accent);padding:9px 12px;border-radius:4px;font-size:13.5px;margin:12px 0}
+.msg{padding:10px 14px;border-radius:6px;margin-bottom:14px} .msg.success{background:var(--ok-bg)} .msg.error{background:var(--err-bg)}
+.muted{color:var(--ink2)} .petit{font-size:12.5px}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:var(--line)}
+.badge.dc{background:var(--err-bg);color:var(--err)} .badge.ok{background:var(--ok-bg);color:#0d7a52}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer;text-decoration:none}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+form.filtres{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+form.filtres label{display:block;font-size:12px;color:var(--ink2)}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.vide{text-align:center;padding:60px 20px}
+.methodo ol.etapes{padding-left:18px;margin:6px 0} .methodo ol.etapes li{margin-bottom:8px}
+.methodo details{margin-top:8px} .methodo summary{cursor:pointer;color:var(--accent)}
+section.interpretation{margin-top:30px;padding:18px;border-radius:12px;background:#eef5fd;border:2px solid #b9d4f3}
+section.interpretation h2{margin-top:0;color:#1d5fae}
+section.interpretation .card ul{padding-left:18px;margin:0} section.interpretation .card li{margin-bottom:6px}
+section.interpretation .card.conclusion{border:2px solid #1d5fae;grid-column:1 / -1}
+.sommaire{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px} .sommaire a{font-size:13px}
+@media (max-width:600px){.grid{grid-template-columns:1fr}.kpi b{font-size:22px}}
+</style>
+
+<style>
+.puces-sites{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.puces-sites a{padding:5px 12px;border-radius:16px;border:1px solid var(--line);background:var(--surface);text-decoration:none;color:var(--ink2);font-size:13.5px}
+.puces-sites a.actif{background:var(--accent);border-color:var(--accent);color:#fff}
+.grav{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600}
+.grav.Critique{background:#fdecec;color:#c03a39}.grav.Majeure{background:#fff1e0;color:#b25a00}.grav.Mineure{background:#eef1f5;color:#52514e}
+td.heat{text-align:center !important;font-variant-numeric:tabular-nums}
+.score{display:inline-block;min-width:44px;text-align:center;padding:2px 8px;border-radius:8px;font-weight:700;color:#fff}
+.explic{color:var(--ink2);font-size:12px}
+</style>
+
+</head>
+<body>
+<div class="app">
+<aside class="menu" id="menu">
+  <div class="logo"><b>MEURI RDC - Ebola</b><span>Protocole EAP Remdesivir / MBP134 · REDCap</span></div>
+
+  <div class="groupe">Tableau de bord</div>
+  <a href="../index.html" class="">🌍 Vue d'ensemble</a>
+  <div class="groupe" style="margin-top:6px">Sites</div>
+  <a class="sous " href="../site/BIAKATO/index.html">📍 Biakato</a><a class="sous " href="../site/BUTA/index.html">📍 Buta</a><a class="sous " href="../site/BUTEMBO/index.html">📍 Butembo</a><a class="sous " href="../site/ISIRO/index.html">📍 Isiro</a><a class="sous " href="../site/KISANGANI/index.html">📍 Kisangani</a><a class="sous " href="../site/SUD-UBANGI/index.html">📍 Sud-Ubangi</a>
+  <div class="groupe" style="margin-top:6px">Analyses tous sites</div>
+  <a class="sous " href="../confirmes/index.html">Cas confirmés</a>
+  <a class="sous " href="../pep/index.html">PEP</a>
+  <a class="sous " href="../securite/index.html">Sécurité (EI)</a>
+  <a class="sous " href="../suivi/index.html">Suivi clinique & PCR</a>
+  
+
+  <div class="groupe">Modélisation du décès</div>
+  <a class="sous " href="../modelisation/index.html">1 - Firth et survie</a>
+  <a class="sous " href="../modelisation-temps/index.html">2 - Facteurs dans le temps</a>
+
+  <div class="groupe">Données</div>
+  <a href="index.html" class="actif">✔ Contrôle qualité</a>
+  <a class="sous " href="site-BIAKATO/index.html">Biakato</a><a class="sous " href="site-BUTA/index.html">Buta</a><a class="sous " href="site-BUTEMBO/index.html">Butembo</a><a class="sous " href="site-ISIRO/index.html">Isiro</a><a class="sous " href="site-KISANGANI/index.html">Kisangani</a><a class="sous " href="site-SUD-UBANGI/index.html">Sud-Ubangi</a>
+  
+
+  <div class="groupe">Version statique<small>Instantané des données au 14/11/2026 ; données agrégées, sans identifiant de participant.</small></div>
+  
+</aside>
+<div class="contenu">
+<header class="top"><div class="wrap">
+  <div class="brand">
+    <div><button class="btn sec petit" id="bouton-menu" type="button" aria-label="Ouvrir le menu">☰ Menu</button>
+      <h1 style="display:inline">Données - contrôle qualité (tous sites)</h1><br>
+      <small>MEURI RDC - protocole EAP · données au <b>14/11/2026</b> · dernier import : MEURIRemdesivirMBP13_DATA_LABELS_2026-11-14_1428.csv (14/11/2026 17:50)</small></div>
+    
+  </div>
+</div></header>
+<main class="wrap">
+
+
+<nav class="puces-sites">
+  <a href="index.html" class="actif">Tous les sites</a>
+  <a href="site-BIAKATO/index.html" class="">Biakato</a><a href="site-BUTA/index.html" class="">Buta</a><a href="site-BUTEMBO/index.html" class="">Butembo</a><a href="site-ISIRO/index.html" class="">Isiro</a><a href="site-KISANGANI/index.html" class="">Kisangani</a><a href="site-SUD-UBANGI/index.html" class="">Sud-Ubangi</a>
+</nav>
+
+
+<div class="info">Le contrôle applique <b>63 règles</b> de cohérence (identité, chronologie des dates, mesures cliniques, traitement,
+PEP, issue et suivi, sécurité) à chaque participant et à ses lignes de suivi, et reprend les valeurs écartées à l'import.
+Date de référence : export du 14/11/2026. </div>
+<div class="kpis">
+  <div class="kpi"><b>437</b><span>participants contrôlés</span></div>
+  <div class="kpi alerte"><b>1294</b><span>anomalies détectées</span></div>
+  <div class="kpi"><b>410 (93,8 %)</b><span>participants avec au moins une anomalie</span></div>
+  <div class="kpi"><b>55 / 63</b><span>règles déclenchées</span></div>
+  <div class="kpi alerte"><b>12</b><span>anomalies <span class="grav Critique">critiques</span></span></div><div class="kpi "><b>567</b><span>anomalies <span class="grav Majeure">majeures</span></span></div><div class="kpi "><b>715</b><span>anomalies <span class="grav Mineure">mineures</span></span></div>
+</div>
+
+
+<h2>Synthèse par site</h2>
+<div class="grid">
+  <div class="card scroll"><table class="t">
+    <thead><tr><th>Site</th><th>Participants</th><th>Anomalies</th><th>Critiques</th><th>Participants concernés</th><th>Complétude</th><th>Sans anomalie grave</th><th>Score qualité</th></tr></thead>
+    <tbody><tr><td><a href="site-KISANGANI/index.html">Kisangani</a></td><td>193</td><td>304</td>
+      <td>6</td><td>91 %</td><td>51 %</td><td>78 %</td>
+      <td><span class="score" style="background:#eda100">64</span></td></tr><tr><td><a href="site-ISIRO/index.html">Isiro</a></td><td>160</td><td>751</td>
+      <td>0</td><td>94 %</td><td>51 %</td><td>18 %</td>
+      <td><span class="score" style="background:#e34948">34</span></td></tr><tr><td><a href="site-BUTEMBO/index.html">Butembo</a></td><td>38</td><td>109</td>
+      <td>3</td><td>100 %</td><td>76 %</td><td>5 %</td>
+      <td><span class="score" style="background:#e34948">41</span></td></tr><tr><td><a href="site-SUD-UBANGI/index.html">Sud-Ubangi</a></td><td>25</td><td>71</td>
+      <td>1</td><td>100 %</td><td>79 %</td><td>48 %</td>
+      <td><span class="score" style="background:#eda100">64</span></td></tr><tr><td><a href="site-BIAKATO/index.html">Biakato</a></td><td>11</td><td>31</td>
+      <td>2</td><td>100 %</td><td>52 %</td><td>0 %</td>
+      <td><span class="score" style="background:#e34948">26</span></td></tr><tr><td><a href="site-BUTA/index.html">Buta</a></td><td>10</td><td>28</td>
+      <td>0</td><td>100 %</td><td>89 %</td><td>30 %</td>
+      <td><span class="score" style="background:#eda100">60</span></td></tr></tbody>
+  </table>
+  <p class="petit muted">Score qualité (0–100) = moyenne de la complétude des variables clés et de la part de participants sans anomalie critique ou majeure.</p></div>
+  <div class="card"><h3>Score qualité par site</h3><div class="chart"><canvas id="g-score"></canvas></div></div>
+</div>
+
+
+<div class="grid" style="margin-top:16px">
+  <div class="card"><h3>Anomalies par catégorie</h3><div class="chart"><canvas id="g-cat"></canvas></div></div>
+  <div class="card"><h3>Comment lire les niveaux de gravité</h3>
+    <p><span class="grav Critique">Critique</span> donnée impossible ou contradictoire qui fausse les analyses (ex. perfusion après le décès, cas confirmé sans traitement).</p>
+    <p><span class="grav Majeure">Majeure</span> donnée manquante ou incohérente sur une variable importante (âge, date d'inclusion, Ct, issue).</p>
+    <p><span class="grav Mineure">Mineure</span> point à vérifier, sans impact majeur (traitement déduit, sexe manquant, EI incomplet).</p></div>
+</div>
+
+<h2>Règles déclenchées</h2>
+<div class="card scroll"><table class="t">
+  <thead><tr><th>Gravité</th><th>Code</th><th class="txt">Contrôle</th><th class="txt">Catégorie</th><th>Total</th>
+    <th>Biakato</th><th>Buta</th><th>Butembo</th><th>Isiro</th><th>Kisangani</th><th>Sud-Ubangi</th></tr></thead>
+  <tbody><tr><td><span class="grav Critique">Critique</span></td><td>TR1</td>
+    <td class="txt"><b>Cas confirmé sans aucune perfusion enregistrée</b></td>
+    <td class="txt petit">Traitement et perfusions</td><td><b>7</b></td>
+    <td>2</td><td></td><td>1</td><td></td><td>4</td><td></td>
+    </tr><tr><td><span class="grav Critique">Critique</span></td><td>PE5</td>
+    <td class="txt"><b>Date d&#x27;exposition après la 1re perfusion</b></td>
+    <td class="txt petit">PEP</td><td><b>3</b></td>
+    <td></td><td></td><td></td><td></td><td>2</td><td>1</td>
+    </tr><tr><td><span class="grav Critique">Critique</span></td><td>PE1</td>
+    <td class="txt"><b>« PEP administrée = Non » mais perfusions enregistrées</b></td>
+    <td class="txt petit">PEP</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Critique">Critique</span></td><td>EI4</td>
+    <td class="txt"><b>EI de gravité « décès » chez un participant non déclaré décédé</b></td>
+    <td class="txt petit">Sécurité (EI)</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>ID2</td>
+    <td class="txt"><b>Âge non renseigné</b><br><span class="explic">Ni date de naissance plausible, ni « OU Année ».</span></td>
+    <td class="txt petit">Identité et démographie</td><td><b>148</b></td>
+    <td>5</td><td>5</td><td>3</td><td>119</td><td>16</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>DT1</td>
+    <td class="txt"><b>Date d&#x27;inclusion manquante</b></td>
+    <td class="txt petit">Dates et chronologie</td><td><b>132</b></td>
+    <td>2</td><td></td><td>1</td><td>119</td><td>10</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>PE3</td>
+    <td class="txt"><b>Contact PEP sans perfusion ni réponse « PEP administrée »</b><br><span class="explic">Formulaires de traitement non saisis dans REDCap.</span></td>
+    <td class="txt petit">PEP</td><td><b>125</b></td>
+    <td></td><td></td><td></td><td>119</td><td>6</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>CL3</td>
+    <td class="txt"><b>Cas confirmé sans Ct GP à l&#x27;inclusion</b><br><span class="explic">La charge virale initiale est la variable clé des modèles.</span></td>
+    <td class="txt petit">Mesures cliniques et biologie</td><td><b>47</b></td>
+    <td>11</td><td></td><td>25</td><td>3</td><td>7</td><td>1</td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>TR2</td>
+    <td class="txt"><b>Traitement non renseigné (dispensation absente) malgré des perfusions</b></td>
+    <td class="txt petit">Traitement et perfusions</td><td><b>21</b></td>
+    <td>1</td><td></td><td>12</td><td>5</td><td>3</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>PE4</td>
+    <td class="txt"><b>Exposition directe déclarée sans date d&#x27;exposition</b></td>
+    <td class="txt petit">PEP</td><td><b>18</b></td>
+    <td></td><td></td><td>3</td><td></td><td>9</td><td>6</td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-92C5</td>
+    <td class="txt"><b>Date de fin d&#x27;étude : valeur écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>9</b></td>
+    <td></td><td></td><td>3</td><td></td><td>1</td><td>5</td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>DT11</td>
+    <td class="txt"><b>Date de fin d&#x27;étude ou de dernier contact avant l&#x27;inclusion</b></td>
+    <td class="txt petit">Dates et chronologie</td><td><b>7</b></td>
+    <td></td><td></td><td>2</td><td>1</td><td>4</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-B31E</td>
+    <td class="txt"><b>Perfusions : valeur manquante</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>7</b></td>
+    <td>2</td><td></td><td>1</td><td></td><td>4</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>TR4</td>
+    <td class="txt"><b>Dose de perfusion nulle ou supérieure à 3 000 mg</b></td>
+    <td class="txt petit">Traitement et perfusions</td><td><b>5</b></td>
+    <td></td><td>2</td><td></td><td></td><td>3</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>SU5</td>
+    <td class="txt"><b>Sorti guéri sans PCR de contrôle avant la sortie</b></td>
+    <td class="txt petit">Issue et suivi</td><td><b>5</b></td>
+    <td></td><td></td><td></td><td>5</td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>TR5</td>
+    <td class="txt"><b>Remdesivir : dose supérieure à 200 mg</b><br><span class="explic">Schéma attendu : 200 mg le 1er jour puis 100 mg/jour (adulte).</span></td>
+    <td class="txt petit">Traitement et perfusions</td><td><b>4</b></td>
+    <td></td><td>1</td><td>3</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>PE2</td>
+    <td class="txt"><b>« PEP administrée = Oui » mais aucune perfusion enregistrée</b></td>
+    <td class="txt petit">PEP</td><td><b>4</b></td>
+    <td></td><td></td><td>2</td><td></td><td>2</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-C38C</td>
+    <td class="txt"><b>Date d&#x27;exposition : valeur écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>4</b></td>
+    <td></td><td></td><td>1</td><td></td><td>2</td><td>1</td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>ID4</td>
+    <td class="txt"><b>Poids incohérent avec l&#x27;âge</b></td>
+    <td class="txt petit">Identité et démographie</td><td><b>3</b></td>
+    <td></td><td></td><td>1</td><td></td><td>2</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>SU4</td>
+    <td class="txt"><b>Cas confirmé sans issue plus de 28 jours après l&#x27;inclusion</b></td>
+    <td class="txt petit">Issue et suivi</td><td><b>3</b></td>
+    <td></td><td></td><td>1</td><td></td><td>2</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>DT2</td>
+    <td class="txt"><b>Début des symptômes après l&#x27;inclusion</b></td>
+    <td class="txt petit">Dates et chronologie</td><td><b>2</b></td>
+    <td>1</td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>DT4</td>
+    <td class="txt"><b>1re perfusion avant l&#x27;inclusion</b></td>
+    <td class="txt petit">Dates et chronologie</td><td><b>2</b></td>
+    <td></td><td></td><td></td><td></td><td>1</td><td>1</td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>SU6</td>
+    <td class="txt"><b>Sorti guéri alors que la dernière PCR est positive</b></td>
+    <td class="txt petit">Issue et suivi</td><td><b>2</b></td>
+    <td></td><td></td><td>2</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-DA81</td>
+    <td class="txt"><b>Date de naissance : valeur écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>2</b></td>
+    <td></td><td></td><td>1</td><td></td><td>1</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-3F7A</td>
+    <td class="txt"><b>Début des symptômes : valeur écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>2</b></td>
+    <td>1</td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-DC83</td>
+    <td class="txt"><b>Fréquence cardiaque (suivi) : valeur aberrante écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>2</b></td>
+    <td></td><td></td><td>1</td><td></td><td>1</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>DT10</td>
+    <td class="txt"><b>PCR prélevée après le décès</b></td>
+    <td class="txt petit">Dates et chronologie</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>CL1</td>
+    <td class="txt"><b>PA systolique ≤ PA diastolique (inclusion)</b></td>
+    <td class="txt petit">Mesures cliniques et biologie</td><td><b>1</b></td>
+    <td>1</td><td></td><td></td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>CL2</td>
+    <td class="txt"><b>PA systolique ≤ PA diastolique (relevés de suivi)</b></td>
+    <td class="txt petit">Mesures cliniques et biologie</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>SU1</td>
+    <td class="txt"><b>Décès sans date de décès</b></td>
+    <td class="txt petit">Issue et suivi</td><td><b>1</b></td>
+    <td>1</td><td></td><td></td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>SU3</td>
+    <td class="txt"><b>Date de sortie ET date de décès renseignées</b></td>
+    <td class="txt petit">Issue et suivi</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-1319</td>
+    <td class="txt"><b>Ct GP inclusion : valeur écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-7FCB</td>
+    <td class="txt"><b>Ct NP inclusion : valeur écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-64E0</td>
+    <td class="txt"><b>Date du dernier contact : valeur écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>1</b></td>
+    <td></td><td></td><td></td><td></td><td></td><td>1</td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-90BE</td>
+    <td class="txt"><b>Fréquence respiratoire (suivi) : valeur aberrante écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-2AA9</td>
+    <td class="txt"><b>Poids (kg) : valeur aberrante écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>1</b></td>
+    <td></td><td></td><td></td><td></td><td></td><td>1</td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-6E8F</td>
+    <td class="txt"><b>SpO2 (suivi) : valeur aberrante écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>1</b></td>
+    <td></td><td></td><td></td><td></td><td>1</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-3C72</td>
+    <td class="txt"><b>SpO2 à l&#x27;inclusion : valeur aberrante écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>1</b></td>
+    <td></td><td></td><td></td><td></td><td>1</td><td></td>
+    </tr><tr><td><span class="grav Majeure">Majeure</span></td><td>IM-845F</td>
+    <td class="txt"><b>Température à l&#x27;inclusion : valeur aberrante écartée</b><br><span class="explic">Détecté à l&#x27;import ; la valeur n&#x27;est pas utilisée dans les analyses.</span></td>
+    <td class="txt petit">Import (corrigé automatiquement)</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>TR3</td>
+    <td class="txt"><b>Traitement déduit du schéma des doses (à confirmer)</b></td>
+    <td class="txt petit">Traitement et perfusions</td><td><b>180</b></td>
+    <td></td><td></td><td>12</td><td>19</td><td>149</td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>CL6</td>
+    <td class="txt"><b>Signes vitaux d&#x27;inclusion absents</b></td>
+    <td class="txt petit">Mesures cliniques et biologie</td><td><b>150</b></td>
+    <td>2</td><td>9</td><td>5</td><td>119</td><td>15</td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>ID1</td>
+    <td class="txt"><b>Sexe non renseigné</b></td>
+    <td class="txt petit">Identité et démographie</td><td><b>141</b></td>
+    <td>2</td><td>5</td><td>2</td><td>119</td><td>13</td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>PE7</td>
+    <td class="txt"><b>Niveau de risque de l&#x27;exposition non renseigné</b></td>
+    <td class="txt petit">PEP</td><td><b>125</b></td>
+    <td></td><td></td><td></td><td>119</td><td>6</td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>TR6</td>
+    <td class="txt"><b>Deux perfusions ou plus le même jour</b></td>
+    <td class="txt petit">Traitement et perfusions</td><td><b>28</b></td>
+    <td></td><td></td><td>4</td><td></td><td>22</td><td>2</td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>EI2</td>
+    <td class="txt"><b>Événement indésirable sans lien de causalité</b></td>
+    <td class="txt petit">Sécurité (EI)</td><td><b>26</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td>25</td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>EI1</td>
+    <td class="txt"><b>Événement indésirable sans sévérité</b></td>
+    <td class="txt petit">Sécurité (EI)</td><td><b>25</b></td>
+    <td></td><td></td><td></td><td></td><td></td><td>25</td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>SU7</td>
+    <td class="txt"><b>Contact PEP sans suivi de survie plus de 21 jours après l&#x27;inclusion</b></td>
+    <td class="txt petit">Issue et suivi</td><td><b>15</b></td>
+    <td></td><td>1</td><td>2</td><td></td><td>12</td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>TR7</td>
+    <td class="txt"><b>Interruption de plus de 2 jours entre deux perfusions</b></td>
+    <td class="txt petit">Traitement et perfusions</td><td><b>8</b></td>
+    <td></td><td></td><td>1</td><td>2</td><td>3</td><td>2</td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>ID6</td>
+    <td class="txt"><b>Préfixe de PID atypique pour le site</b><br><span class="explic">Possible erreur de site (Data Access Group) ou de saisie du PID.</span></td>
+    <td class="txt petit">Identité et démographie</td><td><b>5</b></td>
+    <td></td><td>5</td><td></td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>EI3</td>
+    <td class="txt"><b>Événement indésirable sans terme (description)</b></td>
+    <td class="txt petit">Sécurité (EI)</td><td><b>4</b></td>
+    <td></td><td></td><td>3</td><td>1</td><td></td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>DT3</td>
+    <td class="txt"><b>Début des symptômes plus de 21 jours avant l&#x27;inclusion</b></td>
+    <td class="txt petit">Dates et chronologie</td><td><b>2</b></td>
+    <td></td><td></td><td>2</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>CL5</td>
+    <td class="txt"><b>Cas confirmé sans aucun symptôme déclaré</b><br><span class="explic">Possible (forme pauci-symptomatique) mais à vérifier.</span></td>
+    <td class="txt petit">Mesures cliniques et biologie</td><td><b>2</b></td>
+    <td></td><td></td><td>2</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>TR8</td>
+    <td class="txt"><b>Plus de 11 perfusions</b></td>
+    <td class="txt petit">Traitement et perfusions</td><td><b>2</b></td>
+    <td></td><td></td><td></td><td></td><td>2</td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>DT5</td>
+    <td class="txt"><b>1re perfusion plus de 7 jours après l&#x27;inclusion</b></td>
+    <td class="txt petit">Dates et chronologie</td><td><b>1</b></td>
+    <td></td><td></td><td>1</td><td></td><td></td><td></td>
+    </tr><tr><td><span class="grav Mineure">Mineure</span></td><td>CL4</td>
+    <td class="txt"><b>Écart de plus de 10 cycles entre Ct GP et Ct NP</b></td>
+    <td class="txt petit">Mesures cliniques et biologie</td><td><b>1</b></td>
+    <td></td><td></td><td></td><td>1</td><td></td><td></td>
+    </tr></tbody>
+</table></div>
+
+<h2>Complétude des variables clés</h2>
+<div class="grid">
+  <div class="card scroll"><h3>Cas confirmés (% renseigné)</h3><table class="t">
+    <thead><tr><th class="txt">Variable</th><th>Ensemble</th><th>Biakato</th><th>Buta</th><th>Butembo</th><th>Isiro</th><th>Kisangan</th><th>Sud-Uban</th></tr></thead>
+    <tbody><tr><td class="txt">Sexe</td><td class="heat" data-v="91,8">92</td>
+      <td class="heat" data-v="81,8">82</td><td class="heat" data-v="">-</td><td class="heat" data-v="96,0">96</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Âge</td><td class="heat" data-v="88,2">88</td>
+      <td class="heat" data-v="54,5">55</td><td class="heat" data-v="">-</td><td class="heat" data-v="96,0">96</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Date d&#x27;inclusion</td><td class="heat" data-v="91,8">92</td>
+      <td class="heat" data-v="81,8">82</td><td class="heat" data-v="">-</td><td class="heat" data-v="96,0">96</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Début des symptômes</td><td class="heat" data-v="87,1">87</td>
+      <td class="heat" data-v="81,8">82</td><td class="heat" data-v="">-</td><td class="heat" data-v="88,0">88</td><td class="heat" data-v="97,6">98</td><td class="heat" data-v="28,6">29</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Ct GP</td><td class="heat" data-v="44,7">45</td>
+      <td class="heat" data-v="0,0">0</td><td class="heat" data-v="">-</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="92,7">93</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="0,0">0</td></tr><tr><td class="txt">Ct NP</td><td class="heat" data-v="38,8">39</td>
+      <td class="heat" data-v="0,0">0</td><td class="heat" data-v="">-</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="80,5">81</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="0,0">0</td></tr><tr><td class="txt">Température</td><td class="heat" data-v="90,6">91</td>
+      <td class="heat" data-v="81,8">82</td><td class="heat" data-v="">-</td><td class="heat" data-v="92,0">92</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Fréquence cardiaque</td><td class="heat" data-v="90,6">91</td>
+      <td class="heat" data-v="81,8">82</td><td class="heat" data-v="">-</td><td class="heat" data-v="92,0">92</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">SpO2</td><td class="heat" data-v="83,5">84</td>
+      <td class="heat" data-v="63,6">64</td><td class="heat" data-v="">-</td><td class="heat" data-v="80,0">80</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="28,6">29</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">PA systolique</td><td class="heat" data-v="84,7">85</td>
+      <td class="heat" data-v="72,7">73</td><td class="heat" data-v="">-</td><td class="heat" data-v="92,0">92</td><td class="heat" data-v="90,2">90</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Poids</td><td class="heat" data-v="85,9">86</td>
+      <td class="heat" data-v="81,8">82</td><td class="heat" data-v="">-</td><td class="heat" data-v="88,0">88</td><td class="heat" data-v="92,7">93</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Créatinine</td><td class="heat" data-v="17,6">18</td>
+      <td class="heat" data-v="0,0">0</td><td class="heat" data-v="">-</td><td class="heat" data-v="60,0">60</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="0,0">0</td></tr><tr><td class="txt">ASAT</td><td class="heat" data-v="16,5">17</td>
+      <td class="heat" data-v="0,0">0</td><td class="heat" data-v="">-</td><td class="heat" data-v="56,0">56</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="0,0">0</td></tr><tr><td class="txt">ALAT</td><td class="heat" data-v="16,5">17</td>
+      <td class="heat" data-v="0,0">0</td><td class="heat" data-v="">-</td><td class="heat" data-v="56,0">56</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="0,0">0</td></tr><tr><td class="txt">Test paludisme</td><td class="heat" data-v="90,6">91</td>
+      <td class="heat" data-v="72,7">73</td><td class="heat" data-v="">-</td><td class="heat" data-v="96,0">96</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Traitement</td><td class="heat" data-v="78,8">79</td>
+      <td class="heat" data-v="72,7">73</td><td class="heat" data-v="">-</td><td class="heat" data-v="76,0">76</td><td class="heat" data-v="87,8">88</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">≥ 1 perfusion</td><td class="heat" data-v="91,8">92</td>
+      <td class="heat" data-v="81,8">82</td><td class="heat" data-v="">-</td><td class="heat" data-v="96,0">96</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="42,9">43</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Issue connue</td><td class="heat" data-v="67,1">67</td>
+      <td class="heat" data-v="18,2">18</td><td class="heat" data-v="">-</td><td class="heat" data-v="88,0">88</td><td class="heat" data-v="75,6">76</td><td class="heat" data-v="14,3">14</td><td class="heat" data-v="100,0">100</td></tr></tbody></table></div>
+  <div class="card scroll"><h3>Contacts PEP (% renseigné)</h3><table class="t">
+    <thead><tr><th class="txt">Variable</th><th>Ensemble</th><th>Biakato</th><th>Buta</th><th>Butembo</th><th>Isiro</th><th>Kisangan</th><th>Sud-Uban</th></tr></thead>
+    <tbody><tr><td class="txt">Sexe</td><td class="heat" data-v="61,9">62</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="50,0">50</td><td class="heat" data-v="92,3">92</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="95,2">95</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Âge</td><td class="heat" data-v="60,8">61</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="50,0">50</td><td class="heat" data-v="84,6">85</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="93,5">94</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Date d&#x27;inclusion</td><td class="heat" data-v="64,5">65</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="96,8">97</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Exposition directe (oui/non)</td><td class="heat" data-v="64,2">64</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="92,3">92</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="96,8">97</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Date d&#x27;exposition</td><td class="heat" data-v="38,4">38</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="61,5">62</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="60,8">61</td><td class="heat" data-v="16,7">17</td></tr><tr><td class="txt">Niveau de risque</td><td class="heat" data-v="64,5">65</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="96,8">97</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">PEP administrée (oui/non)</td><td class="heat" data-v="64,2">64</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="96,2">96</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Traitement</td><td class="heat" data-v="63,4">63</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="30,8">31</td><td class="heat" data-v="5,9">6</td><td class="heat" data-v="95,7">96</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">≥ 1 perfusion</td><td class="heat" data-v="63,4">63</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="100,0">100</td><td class="heat" data-v="84,6">85</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="95,7">96</td><td class="heat" data-v="100,0">100</td></tr><tr><td class="txt">Suivi de survie</td><td class="heat" data-v="58,5">59</td>
+      <td class="heat" data-v="">-</td><td class="heat" data-v="90,0">90</td><td class="heat" data-v="38,5">39</td><td class="heat" data-v="0,0">0</td><td class="heat" data-v="90,3">90</td><td class="heat" data-v="100,0">100</td></tr></tbody></table>
+    <p class="petit muted">« - » : pas de participant de ce type sur le site.</p></div>
+</div>
+
+
+
+<details class="card" style="margin-top:16px"><summary><b>8 contrôles sans aucune anomalie</b></summary>
+  <ul><li>ID3 - Âge supérieur à 90 ans</li><li>ID5 - Type (confirmé / PEP) en contradiction avec le PID</li><li>DT6 - Sortie avant l&#x27;inclusion ou la 1re perfusion</li><li>DT7 - Décès avant l&#x27;inclusion</li><li>DT8 - Perfusion enregistrée après la date de décès</li><li>DT9 - Signes vitaux enregistrés après le décès</li><li>PE6 - PEP débutée plus de 21 jours après l&#x27;exposition</li><li>SU2 - Date de décès renseignée mais « vivant au suivi = Oui »</li></ul></details>
+<script id="data-syn" type="application/json">[{"site": "KISANGANI", "n": 193, "confirmes": 7, "pep": 186, "incoherences": 304, "critiques": 6, "concernes": 176, "pct_concernes": 91.2, "completude": 50.6, "sans_grave": 77.7, "score": 64.0}, {"site": "ISIRO", "n": 160, "confirmes": 41, "pep": 119, "incoherences": 751, "critiques": 0, "concernes": 150, "pct_concernes": 93.8, "completude": 50.8, "sans_grave": 18.1, "score": 34.0}, {"site": "BUTEMBO", "n": 38, "confirmes": 25, "pep": 13, "incoherences": 109, "critiques": 3, "concernes": 38, "pct_concernes": 100.0, "completude": 76.2, "sans_grave": 5.3, "score": 41.0}, {"site": "SUD-UBANGI", "n": 25, "confirmes": 1, "pep": 24, "incoherences": 71, "critiques": 1, "concernes": 25, "pct_concernes": 100.0, "completude": 79.2, "sans_grave": 48.0, "score": 64.0}, {"site": "BIAKATO", "n": 11, "confirmes": 11, "pep": 0, "incoherences": 31, "critiques": 2, "concernes": 11, "pct_concernes": 100.0, "completude": 51.5, "sans_grave": 0.0, "score": 26.0}, {"site": "BUTA", "n": 10, "confirmes": 0, "pep": 10, "incoherences": 28, "critiques": 0, "concernes": 10, "pct_concernes": 100.0, "completude": 89.0, "sans_grave": 30.0, "score": 60.0}]</script><script id="data-cat" type="application/json">[{"categorie": "Identit\u00e9 et d\u00e9mographie", "n": 297}, {"categorie": "Dates et chronologie", "n": 147}, {"categorie": "Mesures cliniques et biologie", "n": 202}, {"categorie": "Traitement et perfusions", "n": 255}, {"categorie": "PEP", "n": 276}, {"categorie": "Issue et suivi", "n": 27}, {"categorie": "S\u00e9curit\u00e9 (EI)", "n": 56}, {"categorie": "Import (corrig\u00e9 automatiquement)", "n": 34}]</script>
+
+
+</main>
+</div>
+</div>
+<script>
+(function(){ const m = document.getElementById("menu"), b = document.getElementById("bouton-menu");
+  b.addEventListener("click", e => { e.stopPropagation(); m.classList.toggle("ouvert"); });
+  document.addEventListener("click", e => { if (m.classList.contains("ouvert") && !m.contains(e.target)) m.classList.remove("ouvert"); }); })();
+</script>
+<script>
+const COUL = ["#2a78d6","#eb6834","#1baf7a","#eda100","#6250d6","#e87ba4","#008300","#e34948"];
+Chart.defaults.font.family = 'system-ui,"Segoe UI",sans-serif';
+Chart.defaults.color = "#52514e";
+Chart.defaults.borderColor = "#ebeae6";
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.maintainAspectRatio = false;
+const fr = (v, d=1) => v == null ? "-" : Number(v).toLocaleString("fr-FR", {maximumFractionDigits:d});
+function lire(id){ const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; }
+// barres horizontales d'une distribution {labels, valeurs, lignes:[{pct}]}
+function barresH(id, f, couleur=COUL[0], titre=""){
+  const el = document.getElementById(id); if(!el || !f) return;
+  const total = f.valeurs.reduce((a,b)=>a+b,0);
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{label:titre||"Effectif", data:f.valeurs,
+    backgroundColor:couleur, borderRadius:4, barThickness:18}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw} (${fr(100*c.raw/total)} %)`}}},
+      scales:{x:{beginAtZero:true, ticks:{precision:0}}, y:{grid:{display:false}}}}});
+}
+// barres horizontales en % (valeurs déjà en %), ex. symptômes
+function barresPct(id, f, couleur=COUL[0]){
+  const el = document.getElementById(id); if(!el || !f || !f.labels.length) return;
+  new Chart(el, {type:"bar", data:{labels:f.labels, datasets:[{data:f.valeurs, backgroundColor:couleur, borderRadius:4, barThickness:14}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fr(c.raw)} % (${f.lignes[c.dataIndex].n}/${f.total})`}}},
+      scales:{x:{beginAtZero:true, max:100, title:{display:true,text:"% des participants"}}, y:{grid:{display:false}}}}});
+}
+// courbes : series = [{label, data, couleur}]
+function courbes(id, labels, series, titreY="", opts={}){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"line", data:{labels, datasets:series.map((s,i)=>({label:s.label, data:s.data, borderColor:s.couleur||COUL[i],
+      backgroundColor:s.couleur||COUL[i], borderWidth:2, pointRadius:3, spanGaps:true, yAxisID:"y"}))},
+    options:{interaction:{mode:"index", intersect:false}, scales:{y:{title:{display:true,text:titreY}, ...(opts.y||{})}, x:{grid:{display:false}, ...(opts.x||{})}}}});
+}
+function barresV(id, labels, valeurs, couleur=COUL[0], titre="Effectif"){
+  const el = document.getElementById(id); if(!el) return;
+  new Chart(el, {type:"bar", data:{labels, datasets:[{label:titre, data:valeurs, backgroundColor:couleur, borderRadius:3, maxBarThickness:28}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}, title:{display:true,text:titre}}, x:{grid:{display:false}}}}});
+}
+</script>
+
+<script>
+const syn = lire("data-syn"), cats = lire("data-cat");
+if (document.getElementById("g-score") && syn){
+  new Chart(document.getElementById("g-score"), {type:"bar", data:{labels:syn.map(s=>s.site), datasets:[{data:syn.map(s=>s.score),
+      backgroundColor:syn.map(s=>s.score>=70?"#1baf7a":s.score>=50?"#eda100":"#e34948"), borderRadius:4, barThickness:18}]},
+    options:{indexAxis:"y", plugins:{legend:{display:false}}, scales:{x:{min:0, max:100, title:{display:true,text:"Score qualité (0–100)"}}, y:{grid:{display:false}}}}});
+}
+if (cats) barresH("g-cat", {labels:cats.map(c=>c.categorie), valeurs:cats.map(c=>c.n)}, COUL[1]);
+// coloration des taux de complétude
+document.querySelectorAll("td.heat").forEach(td => { const v = parseFloat(td.dataset.v); if (isNaN(v)) return;
+  td.style.background = v >= 90 ? "#dff3ea" : v >= 70 ? "#fff3d6" : "#fde3e3"; });
+// filtres de la liste détaillée
+const lignes = [...document.querySelectorAll("#tab-detail tbody tr")];
+if (document.getElementById("tab-detail")) {
+function appliquer(){ const g = document.getElementById("f-grav").value, c = document.getElementById("f-cat").value,
+    k = document.getElementById("f-code").value.trim().toUpperCase(), t = document.getElementById("f-txt").value.toLowerCase(); let n = 0;
+  lignes.forEach(tr => { const ok = (!g || tr.dataset.grav === g) && (!c || tr.dataset.cat === c) && (!k || tr.dataset.code === k)
+      && (!t || tr.textContent.toLowerCase().includes(t)); tr.style.display = ok ? "" : "none"; n += ok; });
+  document.getElementById("f-n").textContent = n + " anomalie(s) affichée(s)"; }
+["f-grav","f-cat","f-code","f-txt"].forEach(i => document.getElementById(i).addEventListener("input", appliquer));
+window.filtreCode = function(code){ document.getElementById("f-code").value = code; appliquer(); };
+appliquer();
+}
+</script>
+
+</body>
+</html>
