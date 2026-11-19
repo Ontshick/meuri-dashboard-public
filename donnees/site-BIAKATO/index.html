@@ -58,6 +58,18 @@ header.top{background:rgba(6,21,42,.78);backdrop-filter:saturate(140%) blur(10px
 .brand .puce-date{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:3px 10px;border-radius:999px;background:rgba(47,111,219,.22);border:1px solid rgba(127,178,255,.35);color:#dbe8ff;font-size:12px;font-weight:600}
 .brand .puce-date::before{content:"";width:7px;height:7px;border-radius:50%;background:#3fd39b;box-shadow:0 0 0 3px rgba(63,211,155,.2)}
 .actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+details.menu-rapport{position:relative}
+details.menu-rapport summary{list-style:none;cursor:pointer;user-select:none}
+details.menu-rapport summary::-webkit-details-marker{display:none}
+details.menu-rapport .chevron{width:7px;height:7px;margin-left:4px;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(45deg) translateY(-2px);transition:transform .2s}
+details.menu-rapport[open] .chevron{transform:rotate(-135deg) translateY(-2px)}
+.menu-rapport-liste{position:absolute;left:0;top:calc(100% + 8px);z-index:40;min-width:270px;padding:6px;border-radius:14px;background:#fff;
+  box-shadow:0 18px 44px rgba(3,14,32,.45);border:1px solid #dbe5f2;animation:monter .18s ease both}
+.menu-rapport-liste a{display:flex;gap:12px;align-items:center;padding:9px 10px;border-radius:10px;text-decoration:none;color:var(--ink)}
+.menu-rapport-liste a:hover,.menu-rapport-liste a:focus-visible{background:#eef4ff}
+.menu-rapport-liste b{display:block;font-size:13.5px} .menu-rapport-liste small{display:block;font-size:11.5px;color:var(--ink2)}
+.menu-rapport-liste .fmt{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px}
+.fmt.docx{background:linear-gradient(135deg,#2b579a,#4a7fd0)} .fmt.pdf{background:linear-gradient(135deg,#c8323f,#e8626d)} .fmt.pptx{background:linear-gradient(135deg,#c43e1c,#ec7a4c)}
 .logo-entete{height:40px;width:auto;background:#fff;border-radius:10px;padding:4px 8px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 #bouton-menu{display:none}
 main{padding:26px 0 40px;flex:1}
@@ -169,6 +181,9 @@ aside.menu a.sous.actif::after{background:#fff}
 .hero-puces .ico-svg{width:15px;height:15px}
 .hero-logo{flex:none;position:relative;z-index:1;background:#fff;border-radius:18px;padding:12px 18px;box-shadow:0 12px 32px rgba(0,0,0,.32)}
 .hero-logo img{display:block;height:92px;width:auto}
+.hero-page{justify-content:flex-start;gap:18px;padding:20px 24px;margin-bottom:20px}
+.hero-page h2.hero-titre{font-size:22px;margin:4px 0 6px}.hero-page p{font-size:13.8px}
+.hero-ico{flex:none;position:relative;z-index:1;width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.25);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
 .hero-site{padding:22px 26px}.hero-site .hero-logo img{height:70px}.hero-site h2.hero-titre{font-size:30px}
 @media (max-width:760px){.hero{flex-direction:column-reverse;align-items:flex-start;padding:22px}.hero-logo img{height:62px}.hero h2.hero-titre{font-size:21px}}
 /* ---- apparition douce ---- */
@@ -261,7 +276,11 @@ details.pids div a,details.pids div span{font-size:11.5px;font-weight:600;paddin
 </div></header>
 <main class="wrap">
 
-
+<section class="hero hero-page" aria-label="Contrôle qualité des données">
+  <div class="hero-ico" aria-hidden="true"><svg class="ico-svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></div>
+  <div style="position:relative;z-index:1"><span class="surtitre">MEURI RDC · INRB · protocole EAP</span>
+    <h2 class="hero-titre">Contrôle qualité des données</h2><p>Règles de cohérence, complétude des variables clés et anomalies à corriger, avec téléchargements par site.</p></div>
+</section>
 <nav class="puces-sites">
   <a href="../index.html" class="">Tous les sites</a>
   <a href="index.html" class="actif">Biakato</a><a href="../site-BUTA/index.html" class="">Buta</a><a href="../site-BUTEMBO/index.html" class="">Butembo</a><a href="../site-ISIRO/index.html" class="">Isiro</a><a href="../site-KISANGANI/index.html" class="">Kisangani</a><a href="../site-SUD-UBANGI/index.html" class="">Sud-Ubangi</a>
@@ -424,6 +443,7 @@ Date de référence : export du 14/11/2026. </div>
 </div>
 </div>
 <script>
+document.addEventListener("click", e => document.querySelectorAll("details.menu-rapport[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; }));
 (function(){ const m = document.getElementById("menu"), b = document.getElementById("bouton-menu");
   b.addEventListener("click", e => { e.stopPropagation(); m.classList.toggle("ouvert"); });
   document.addEventListener("click", e => { if (m.classList.contains("ouvert") && !m.contains(e.target)) m.classList.remove("ouvert"); }); })();
@@ -453,6 +473,19 @@ Chart.defaults.animation.duration = 900;
 Chart.defaults.animation.easing = "easeOutQuart";
 Chart.defaults.scale.grid.color = "#eef2f7";
 Chart.defaults.scale.border.display = false;
+// barres en dégradé (couleur pleine en haut, plus claire à la base) pour toutes les séries d'une seule couleur
+Chart.register({id: "degrade", beforeUpdate(chart){
+  chart.data.datasets.forEach(ds => {
+    const type = ds.type || chart.config.type;
+    if (type !== "bar" || typeof ds.backgroundColor !== "string" || !/^#[0-9a-f]{6}$/i.test(ds.backgroundColor) || ds._degrade) return;
+    const c = ds.backgroundColor; ds._degrade = true;
+    ds.hoverBackgroundColor = c;
+    ds.backgroundColor = ctx => { const a = ctx.chart.chartArea; if (!a) return c;
+      const h = ctx.chart.options.indexAxis === "y";
+      const g = h ? ctx.chart.ctx.createLinearGradient(a.left, 0, a.right, 0) : ctx.chart.ctx.createLinearGradient(0, a.bottom, 0, a.top);
+      g.addColorStop(0, c + "99"); g.addColorStop(1, c); return g; };
+  });
+}});
 Chart.defaults.maintainAspectRatio = false;
 const fr = (v, d=1) => v == null ? "-" : Number(v).toLocaleString("fr-FR", {maximumFractionDigits:d});
 function lire(id){ const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; }
@@ -486,6 +519,22 @@ function barresV(id, labels, valeurs, couleur=COUL[0], titre="Effectif"){
 }
 </script>
 <script id="icones-svg" type="application/json">{"accueil": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 10.5 12 3l9 7.5\"/><path d=\"M5 9.5V21h14V9.5\"/><path d=\"M9.5 21v-6h5v6\"/><\/svg>", "site": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z\"/><circle cx=\"12\" cy=\"9.5\" r=\"2.5\"/><\/svg>", "virus": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"5\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1\"/><\/svg>", "bouclier": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3 4.5 6v5.5c0 4.6 3.2 8.3 7.5 9.5 4.3-1.2 7.5-4.9 7.5-9.5V6Z\"/><path d=\"m9 12 2 2 4-4\"/><\/svg>", "alerte": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z\"/><path d=\"M12 9v4M12 17h.01\"/><\/svg>", "pouls": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 12h4l2.5-6 4 12 2.5-6H21\"/><\/svg>", "personnes": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"9\" cy=\"8\" r=\"3.5\"/><path d=\"M2.5 20a6.5 6.5 0 0 1 13 0\"/><path d=\"M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 20a6.5 6.5 0 0 0-3-5.5\"/><\/svg>", "courbe": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 3v18h18\"/><path d=\"m7 15 4-5 3 3 5-7\"/><\/svg>", "horloge": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/><\/svg>", "qualite": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8.5 12 2.5 2.5 4.5-5\"/><\/svg>", "liste": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"5\" y=\"4\" width=\"14\" height=\"17\" rx=\"2\"/><path d=\"M9 4V3h6v1M9 10h6M9 14h6M9 18h4\"/><\/svg>", "document": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z\"/><path d=\"M14 3v5h5M9 13h6M9 17h6\"/><\/svg>", "importer": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 16V4M7 9l5-5 5 5\"/><path d=\"M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3\"/><\/svg>", "exporter": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 4v12M7 11l5 5 5-5\"/><path d=\"M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3\"/><\/svg>", "reglages": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z\"/><\/svg>", "goutte": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11Z\"/><\/svg>", "coeur": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20.8 5.6a5.4 5.4 0 0 0-7.7 0L12 6.7l-1.1-1.1a5.4 5.4 0 0 0-7.7 7.7L12 22l8.8-8.7a5.4 5.4 0 0 0 0-7.7Z\"/><\/svg>", "calendrier": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M16 3v4M8 3v4M3 10h18\"/><\/svg>", "base": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><ellipse cx=\"12\" cy=\"5.5\" rx=\"8\" ry=\"2.5\"/><path d=\"M4 5.5v13c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5v-13\"/><path d=\"M4 12c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5\"/><\/svg>", "point": "<svg class=\"ico-svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><\/svg>"}</script>
+<script>
+// chiffres clés : comptage animé à l'affichage (respecte « réduire les animations »)
+(function(){ if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.querySelectorAll(".kpi b").forEach(b => {
+    const brut = b.textContent.trim(), m = brut.match(/^(\d[\d\s\u202f]*)(?:[,.](\d+))?(\s*%)?$/);
+    if (!m) return;
+    const dec = m[2] ? m[2].length : 0, cible = parseFloat(m[1].replace(/[\s\u202f]/g, "") + (m[2] ? "." + m[2] : "")), suffixe = m[3] || "";
+    if (!isFinite(cible) || cible === 0) return;
+    const t0 = performance.now(), duree = 900;
+    const pas = t => { const k = Math.min((t - t0) / duree, 1), e = 1 - Math.pow(1 - k, 3);
+      b.textContent = (cible * e).toLocaleString("fr-FR", {minimumFractionDigits: dec, maximumFractionDigits: dec}) + suffixe;
+      if (k < 1) requestAnimationFrame(pas); else b.textContent = brut; };
+    requestAnimationFrame(pas);
+  });
+})();
+</script>
 <script>
 // icône de chaque indicateur clé, choisie d'après son libellé
 (function(){ const el = document.getElementById("icones-svg"); if (!el) return; const I = JSON.parse(el.textContent);
