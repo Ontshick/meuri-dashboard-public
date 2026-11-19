@@ -88,6 +88,21 @@ section.interpretation .card.conclusion{border:2px solid #1d5fae;grid-column:1 /
 td.heat{text-align:center !important;font-variant-numeric:tabular-nums}
 .score{display:inline-block;min-width:44px;text-align:center;padding:2px 8px;border-radius:8px;font-weight:700;color:#fff}
 .explic{color:var(--ink2);font-size:12px}
+.dl{background:linear-gradient(135deg,#14213d 0%,#1f4e79 60%,#2a78d6 140%);color:#fff;border-radius:14px;padding:18px 20px 20px;margin-bottom:16px;box-shadow:0 6px 18px rgba(20,33,61,.18)}
+.dl-tete{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.dl h3{color:#fff;font-size:17px;margin:0 0 4px} .dl p{margin:0;color:#d5e3f5;font-size:13px;max-width:760px}
+.dl-badge{flex:none;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em}
+.dl-badge.ok{background:#dff3ea;color:#0d7a52} .dl-badge.conf{background:#fde3e3;color:#c03a39}
+.dl-grille{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.dl-site{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:10px 12px;transition:background .15s}
+.dl-site:hover{background:rgba(255,255,255,.12)}
+.dl-site.actif{background:rgba(42,120,214,.38);border-color:#8cc2ff}
+.dl-nom{font-weight:700;font-size:14px;margin-bottom:8px} .dl-nom small{font-weight:400;color:#cfe2fb}
+.dl-liens{display:flex;gap:6px;flex-wrap:wrap}
+.dl-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:7px;background:#fff;color:#14213d;text-decoration:none;font-size:12.5px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.dl-btn:hover{background:#eaf2fc} .dl-btn:focus-visible{outline:2px solid #8cc2ff;outline-offset:2px}
+.dl-btn::before{content:"";width:8px;height:8px;border-radius:2px;background:#1d6f42}
+.dl-btn.docx::before{background:#2b579a} .dl-btn.pdf::before{background:#c03a39}
 </style>
 
 </head>
@@ -136,30 +151,30 @@ td.heat{text-align:center !important;font-variant-numeric:tabular-nums}
   <a href="index.html" class="actif">Biakato</a><a href="../site-BUTA/index.html" class="">Buta</a><a href="../site-BUTEMBO/index.html" class="">Butembo</a><a href="../site-ISIRO/index.html" class="">Isiro</a><a href="../site-KISANGANI/index.html" class="">Kisangani</a><a href="../site-SUD-UBANGI/index.html" class="">Sud-Ubangi</a>
 </nav>
 
-<div class="card" id="telechargements" style="margin-bottom:12px"><h3>⬇ Téléchargements - contrôle qualité</h3>
-  <p class="petit muted" style="margin-top:0">Fichiers Excel <b>agrégés</b> (aucun identifiant de participant) : résumé, synthèse par site, règles déclenchées et complétude des variables.
-  </p>
-  <div class="scroll"><table class="t">
-    <thead><tr><th>Site</th><th>Qualité (Excel agrégé)</th></tr></thead>
-    <tbody>
-    <tr class="tot"><td>Tous les sites</td>
-      <td><a href="../../telechargements/qualite_agregee_tous-sites.xlsx" download>⬇ Excel</a></td>
-      </tr>
-    <tr><td><b>Biakato</b></td>
-      <td><a href="../../telechargements/qualite_agregee_biakato.xlsx" download>⬇ Excel</a></td>
-      </tr><tr><td>Buta</td>
-      <td><a href="../../telechargements/qualite_agregee_buta.xlsx" download>⬇ Excel</a></td>
-      </tr><tr><td>Butembo</td>
-      <td><a href="../../telechargements/qualite_agregee_butembo.xlsx" download>⬇ Excel</a></td>
-      </tr><tr><td>Isiro</td>
-      <td><a href="../../telechargements/qualite_agregee_isiro.xlsx" download>⬇ Excel</a></td>
-      </tr><tr><td>Kisangani</td>
-      <td><a href="../../telechargements/qualite_agregee_kisangani.xlsx" download>⬇ Excel</a></td>
-      </tr><tr><td>Sud-Ubangi</td>
-      <td><a href="../../telechargements/qualite_agregee_sud-ubangi.xlsx" download>⬇ Excel</a></td>
-      </tr>
-    </tbody></table></div>
-</div>
+<section class="dl" id="telechargements" aria-labelledby="dl-titre">
+  <div class="dl-tete">
+    <div><h3 id="dl-titre">⬇ Téléchargements du contrôle qualité</h3>
+      <p>Classeurs Excel <b>agrégés</b> pour l'ensemble et pour chaque site : résumé, synthèse, règles déclenchées, complétude des variables.
+      </p></div>
+    <span class="dl-badge ok">Agrégé · sans PID</span>
+  </div>
+  <div class="dl-grille">
+    <div class="dl-site"><div class="dl-nom">Tous les sites</div>
+      <div class="dl-liens"><a class="dl-btn xlsx" href="../../telechargements/qualite_agregee_tous-sites.xlsx" download title="Classeur agrégé, sans identifiant">Excel qualité</a></div></div>
+    <div class="dl-site actif"><div class="dl-nom">Biakato <small>(page affichée)</small></div>
+      <div class="dl-liens"><a class="dl-btn xlsx" href="../../telechargements/qualite_agregee_biakato.xlsx" download title="Classeur agrégé, sans identifiant">Excel qualité</a></div></div>
+    <div class="dl-site"><div class="dl-nom">Buta</div>
+      <div class="dl-liens"><a class="dl-btn xlsx" href="../../telechargements/qualite_agregee_buta.xlsx" download title="Classeur agrégé, sans identifiant">Excel qualité</a></div></div>
+    <div class="dl-site"><div class="dl-nom">Butembo</div>
+      <div class="dl-liens"><a class="dl-btn xlsx" href="../../telechargements/qualite_agregee_butembo.xlsx" download title="Classeur agrégé, sans identifiant">Excel qualité</a></div></div>
+    <div class="dl-site"><div class="dl-nom">Isiro</div>
+      <div class="dl-liens"><a class="dl-btn xlsx" href="../../telechargements/qualite_agregee_isiro.xlsx" download title="Classeur agrégé, sans identifiant">Excel qualité</a></div></div>
+    <div class="dl-site"><div class="dl-nom">Kisangani</div>
+      <div class="dl-liens"><a class="dl-btn xlsx" href="../../telechargements/qualite_agregee_kisangani.xlsx" download title="Classeur agrégé, sans identifiant">Excel qualité</a></div></div>
+    <div class="dl-site"><div class="dl-nom">Sud-Ubangi</div>
+      <div class="dl-liens"><a class="dl-btn xlsx" href="../../telechargements/qualite_agregee_sud-ubangi.xlsx" download title="Classeur agrégé, sans identifiant">Excel qualité</a></div></div>
+  </div>
+</section>
 
 <div class="info">Le contrôle applique <b>47 règles</b> de cohérence (identité, chronologie des dates, mesures cliniques, traitement,
 PEP, issue et suivi, sécurité) à chaque participant et à ses lignes de suivi, et reprend les valeurs écartées à l'import.
